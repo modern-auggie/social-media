@@ -40,6 +40,10 @@ const paths = {
     <circle key="a" cx="12" cy="12" r="9" />,
     <path key="b" d="m15 9-2 6-4 2 2-6z" />
   ],
+  edit: [
+    <path key="a" d="M12 20h9" />,
+    <path key="b" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+  ],
   heart: [<path key="a" d="M20 8c0 6-8 11-8 11S4 14 4 8a4 4 0 0 1 7-3 4 4 0 0 1 9 3Z" />],
   home: [
     <path key="a" d="M3 11 12 4l9 7" />,
@@ -62,6 +66,7 @@ const paths = {
     <path key="b" d="M5 11a7 7 0 0 0 14 0" />,
     <path key="c" d="M12 18v3" />
   ],
+  minus: [<path key="a" d="M5 12h14" />],
   music: [
     <path key="a" d="M9 18V5l11-2v13" />,
     <circle key="b" cx="6" cy="18" r="3" />,

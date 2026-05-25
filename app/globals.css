@@ -2,8 +2,12 @@
 
 :root {
   color-scheme: light;
-  --background: #f7f7f2;
-  --foreground: #1d2026;
+  --background: #fafaf9;
+  --foreground: #0c0a09;
+  --muted: #57534e;
+  --border: #e7e5e4;
+  --surface: #ffffff;
+  --accent: #0c0a09;
 }
 
 * {
@@ -13,6 +17,8 @@
 html {
   min-width: 320px;
   background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -22,9 +28,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  letter-spacing: 0;
+    "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  letter-spacing: -0.005em;
 }
 
 button,
@@ -49,8 +56,8 @@ img {
 }
 
 ::selection {
-  background: #c8efe3;
-  color: #111827;
+  background: #0c0a09;
+  color: #ffffff;
 }
 
 .no-scrollbar {

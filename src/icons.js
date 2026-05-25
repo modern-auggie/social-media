@@ -86,6 +86,12 @@ const paths = {
     <path key="b" d="M7 10V7a5 5 0 0 1 10 0v3" />
   ],
   sparkles: [<path key="a" d="M12 3 9 9l-6 3 6 3 3 6 3-6 6-3-6-3z" />],
+  wink: [
+    <circle key="a" cx="12" cy="12" r="9" />,
+    <circle key="b" cx="15" cy="10" r="1.5" fill="currentColor" />,
+    <path key="c" d="M8 10 q1.5 2.5 3 0" />,
+    <path key="d" d="M8.5 15 q3.5 3.5 7 0" />
+  ],
   tag: [
     <path key="a" d="M20 13 13 20 4 11V4h7z" />,
     <circle key="b" cx="8" cy="8" r="1" />

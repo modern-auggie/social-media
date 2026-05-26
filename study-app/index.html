@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Brain Spark — flashcards, quizzes, planner</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<aside id="sidebar">
+  <div class="brand">
+    <div class="logo" aria-label="Brain Spark">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18h6"/>
+        <path d="M10 21h4"/>
+        <path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5v0h6v0c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/>
+        <path d="M12 7v4"/>
+        <path d="M10 9h4"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">Brain Spark</div>
+      <div class="brand-sub" id="userLabel">Not signed in</div>
+    </div>
+  </div>
+  <nav>
+    <button data-view="dashboard" class="nav active">Dashboard</button>
+    <div class="nav-group" data-group="studysets">
+      <button class="nav nav-group-header" data-toggle="studysets">
+        <span class="caret">▾</span> Study Sets
+      </button>
+      <div class="nav-sub">
+        <button data-view="sets" class="nav sub">All sets</button>
+        <button data-view="flashcards" class="nav sub">Flashcards</button>
+        <button data-view="learn" class="nav sub">Learn Mode</button>
+        <button data-view="quiz" class="nav sub">Practice Tests</button>
+        <button data-view="quizbuilder" class="nav sub">Quiz Builder</button>
+        <button data-view="notes" class="nav sub">Notes</button>
+      </div>
+    </div>
+    <button data-view="planner" class="nav">Planner</button>
+    <button data-view="pomodoro" class="nav">Pomodoro</button>
+    <button data-view="analytics" class="nav">Progress</button>
+    <button data-view="resources" class="nav">Resources</button>
+    <button data-view="share" class="nav">Share</button>
+    <button data-view="account" class="nav">Account</button>
+  </nav>
+  <div class="streak" id="streakBox">🔥 <span id="streakCount">0</span>-day streak</div>
+</aside>
+
+<main id="app">
+  <!-- views injected by JS -->
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js" defer></script>
+</body>
+</html>

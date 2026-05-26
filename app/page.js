@@ -266,6 +266,8 @@ export default function FriendsApp() {
   const [hiddenWords, setHiddenWords] = useState(hiddenWordDefaults);
   const [hiddenWordDraft, setHiddenWordDraft] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState("");
   const [toast, setToast] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
@@ -600,6 +602,24 @@ export default function FriendsApp() {
     showToast(`${composerMode} published to ${composerAudience.toLowerCase()}`);
   }
 
+  function defaultScheduleValue() {
+    const date = new Date(Date.now() + 60 * 60 * 1000);
+    date.setMinutes(Math.ceil(date.getMinutes() / 15) * 15, 0, 0);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  function openScheduler() {
+    if (!composerText.trim()) {
+      showToast("Write a caption before scheduling");
+      setComposerOpen(true);
+      return;
+    }
+    setScheduleAt((current) => current || defaultScheduleValue());
+    setScheduleOpen(true);
+    setComposerOpen(true);
+  }
+
   function schedulePost() {
     const caption = composerText.trim();
     if (!caption) {
@@ -607,7 +627,19 @@ export default function FriendsApp() {
       setComposerOpen(true);
       return;
     }
-    const scheduledAt = new Date(Date.now() + 36 * 60 * 60 * 1000);
+    if (!scheduleAt) {
+      showToast("Pick a date and time");
+      return;
+    }
+    const scheduledAt = new Date(scheduleAt);
+    if (Number.isNaN(scheduledAt.getTime())) {
+      showToast("That date is invalid");
+      return;
+    }
+    if (scheduledAt.getTime() <= Date.now()) {
+      showToast("Pick a time in the future");
+      return;
+    }
     setScheduledPosts((current) => [
       {
         id: `scheduled-${Date.now()}`,
@@ -617,6 +649,7 @@ export default function FriendsApp() {
         uploads: composerUploads,
         audience: composerAudience,
         location: composerLocation,
+        scheduledAtIso: scheduledAt.toISOString(),
         scheduledFor: scheduledAt.toLocaleString([], {
           month: "short",
           day: "numeric",
@@ -626,9 +659,11 @@ export default function FriendsApp() {
       },
       ...current
     ]);
+    setScheduleOpen(false);
+    setScheduleAt("");
     resetComposer();
     setActiveCreatorTool("Scheduling");
-    showToast("Post scheduled for tomorrow");
+    showToast(`Scheduled for ${scheduledAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`);
   }
 
   function saveComposerDraft() {
@@ -810,6 +845,30 @@ export default function FriendsApp() {
     safety: renderSafety
   };
 
+  function renderActiveView() {
+    const render = views[view] || renderFeed;
+    try {
+      return render();
+    } catch (error) {
+      if (typeof console !== "undefined") console.error(`[Friends] render '${view}' failed:`, error);
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-900">
+          <p className="font-semibold">This view hit a render error.</p>
+          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs">
+            {String(error?.message || error)}
+          </pre>
+          <button
+            type="button"
+            onClick={() => routeTo("feed")}
+            className="mt-4 inline-flex h-9 items-center rounded-md bg-stone-900 px-4 text-sm font-medium text-white"
+          >
+            Back to Feed
+          </button>
+        </div>
+      );
+    }
+  }
+
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900">
       <header className="sticky top-0 z-40 border-b border-stone-200 bg-white/80 backdrop-blur">
@@ -913,7 +972,7 @@ export default function FriendsApp() {
 
         <main className="min-w-0 flex-1">
           <section aria-live="polite">
-            {(views[view] || renderFeed)()}
+            {renderActiveView()}
           </section>
         </main>
       </div>
@@ -1125,7 +1184,7 @@ export default function FriendsApp() {
                     type="button"
                     onClick={() => {
                       if (label === "Schedule") {
-                        schedulePost();
+                        openScheduler();
                         return;
                       }
                       if (label === "Tags") setComposerText((text) => `${text}${text.endsWith(" ") || !text ? "" : " "}#`);
@@ -1150,6 +1209,34 @@ export default function FriendsApp() {
                   Publish
                 </PrimaryButton>
               </div>
+              {scheduleOpen ? (
+                <div className="mt-3 flex flex-col gap-3 rounded-md border border-stone-200 bg-stone-50 p-3 sm:flex-row sm:items-end">
+                  <label className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wider text-stone-500">Send at</span>
+                    <input
+                      type="datetime-local"
+                      value={scheduleAt}
+                      min={defaultScheduleValue()}
+                      onChange={(event) => setScheduleAt(event.target.value)}
+                      className="h-9 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-900 outline-none focus:border-stone-900"
+                    />
+                  </label>
+                  <div className="flex gap-2">
+                    <SecondaryButton
+                      icon="close"
+                      onClick={() => {
+                        setScheduleOpen(false);
+                        setScheduleAt("");
+                      }}
+                    >
+                      Cancel
+                    </SecondaryButton>
+                    <PrimaryButton icon="calendar" onClick={schedulePost}>
+                      Schedule
+                    </PrimaryButton>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         </Card>

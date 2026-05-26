@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   collabItems,
   creatorTools,
@@ -20,8 +20,8 @@ import { platform } from "../src/platform.js";
 
 const STORAGE_KEY = "friends-next-state";
 const VIEW_IDS = new Set(navItems.map((item) => item.id));
-const FOLLOWING_DEFAULTS = ["maya.creates", "northskin"];
-const INITIAL_LIKED_POST_IDS = ["post-1"];
+const FOLLOWING_DEFAULTS = [];
+const INITIAL_LIKED_POST_IDS = [];
 const initialMediaIndex = Object.fromEntries(posts.map((post) => [post.id, 0]));
 const initialPostComments = Object.fromEntries(posts.map((post) => [post.id, post.comments]));
 const initialThreadMessages = Object.fromEntries(messageThreads.map((thread) => [thread.id, thread.messages]));
@@ -207,6 +207,67 @@ function MediaFrame({ item, children, tall = false }) {
   );
 }
 
+function ReelPlayer({ reel }) {
+  const videoRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
+
+  function toggle() {
+    const node = videoRef.current;
+    if (!node) return;
+    if (node.paused) {
+      node.play().catch(() => {});
+    } else {
+      node.pause();
+    }
+  }
+
+  function toggleMute(event) {
+    event.stopPropagation();
+    setMuted((current) => {
+      const next = !current;
+      if (videoRef.current) videoRef.current.muted = next;
+      return next;
+    });
+  }
+
+  return (
+    <figure className="relative aspect-[9/14] overflow-hidden bg-slate-900">
+      <video
+        ref={videoRef}
+        src={reel.video}
+        poster={reel.src}
+        muted={muted}
+        loop
+        playsInline
+        preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onClick={toggle}
+        className="size-full cursor-pointer object-cover"
+      />
+      {!playing ? (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={`Play ${reel.title}`}
+          className="absolute left-1/2 top-1/2 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-slate-900 shadow-lg transition hover:scale-105"
+        >
+          <span className="ml-0.5 block size-0 border-y-[10px] border-l-[16px] border-y-transparent border-l-slate-900" />
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={toggleMute}
+        aria-label={muted ? "Unmute" : "Mute"}
+        className="absolute bottom-3 right-3 grid size-9 place-items-center rounded-full bg-slate-900/70 text-white backdrop-blur transition hover:bg-slate-900/85"
+      >
+        <span className="text-xs font-semibold">{muted ? "OFF" : "ON"}</span>
+      </button>
+    </figure>
+  );
+}
+
 function Card({ className = "", children, as: As = "section" }) {
   return (
     <As className={cx("min-w-0 rounded-3xl bg-blue-50 shadow-[0_8px_24px_-12px_rgba(30,64,175,0.18)] ring-1 ring-blue-100/70", className)}>
@@ -225,13 +286,14 @@ export default function FriendsApp() {
     link: currentUser.link,
     photo: currentUser.photo || ""
   });
-  const [selectedStory, setSelectedStory] = useState(stories[0].id);
+  const [selectedStory, setSelectedStory] = useState(stories[0]?.id ?? null);
+  const [activeAccountId, setActiveAccountId] = useState("self");
   const [selectedThread, setSelectedThread] = useState(messageThreads[0].id);
   const [mediaIndex, setMediaIndex] = useState(initialMediaIndex);
   const [likedPosts, setLikedPosts] = useState(new Set(INITIAL_LIKED_POST_IDS));
   const [repostedPosts, setRepostedPosts] = useState(new Set());
-  const [savedPosts, setSavedPosts] = useState(new Set(["post-2"]));
-  const [likedReels, setLikedReels] = useState(new Set(["reel-1"]));
+  const [savedPosts, setSavedPosts] = useState(new Set());
+  const [likedReels, setLikedReels] = useState(new Set());
   const [savedReels, setSavedReels] = useState(new Set());
   const [feedMode, setFeedMode] = useState("For You");
   const [privateAccount, setPrivateAccount] = useState(false);
@@ -280,6 +342,34 @@ export default function FriendsApp() {
   const [hydrated, setHydrated] = useState(false);
 
   const allPosts = useMemo(() => [...draftPosts, ...posts], [draftPosts]);
+  const altAccounts = useMemo(
+    () =>
+      stories
+        .filter((story) => story.avatarPhoto)
+        .map((story) => ({
+          id: story.id,
+          handle: story.user,
+          name: story.user,
+          avatar: story.avatar,
+          photo: story.avatarPhoto
+        })),
+    []
+  );
+  const accounts = useMemo(
+    () => [
+      {
+        id: "self",
+        handle: userProfile.handle,
+        name: userProfile.name,
+        avatar: userProfile.avatar,
+        photo: userProfile.photo || ""
+      },
+      ...altAccounts
+    ],
+    [userProfile.handle, userProfile.name, userProfile.avatar, userProfile.photo, altAccounts]
+  );
+  const activeAccount = accounts.find((account) => account.id === activeAccountId) || accounts[0];
+  const userAccountHandles = useMemo(() => new Set(accounts.map((account) => account.handle)), [accounts]);
   const activeMediaPreset = mediaPresets.find((item) => item.id === composerAsset) || mediaPresets[0];
   const composerPreview = composerMode === "Reel"
     ? { src: "/assets/reel-dance.png", label: "Reel preview" }
@@ -293,7 +383,7 @@ export default function FriendsApp() {
     if (feedMode === "Saved") return savedPosts.has(post.id);
     return true;
   });
-  const selectedStoryData = stories.find((story) => story.id === selectedStory) || stories[0];
+  const selectedStoryData = stories.find((story) => story.id === selectedStory) || stories[0] || null;
   const selectedThreadData = messageThreads.find((thread) => thread.id === selectedThread) || messageThreads[0];
   const selectedMessages = threadMessages[selectedThreadData.id] || selectedThreadData.messages;
   const filteredThreads = messageThreads.filter((thread) => {
@@ -329,8 +419,8 @@ export default function FriendsApp() {
     });
     setLikedPosts(new Set(saved.likedPosts || INITIAL_LIKED_POST_IDS));
     setRepostedPosts(new Set(saved.repostedPosts || []));
-    setSavedPosts(new Set(saved.savedPosts || ["post-2"]));
-    setLikedReels(new Set(saved.likedReels || ["reel-1"]));
+    setSavedPosts(new Set(saved.savedPosts || []));
+    setLikedReels(new Set(saved.likedReels || []));
     setSavedReels(new Set(saved.savedReels || []));
     setFeedMode(saved.feedMode || "For You");
     setPrivateAccount(saved.privateAccount ?? false);
@@ -584,14 +674,14 @@ export default function FriendsApp() {
         }));
     return {
       id: `draft-${Date.now()}`,
-      author: userProfile.handle,
-      avatar: userProfile.avatar,
-      avatarImage: userProfile.photo || "",
+      author: activeAccount.handle,
+      avatar: activeAccount.avatar,
+      avatarImage: activeAccount.photo || "",
       location: composerLocation.trim() || "Shared from Friends",
       published: "now",
       type: !isReel && media.length > 1 ? "carousel" : composerMode.toLowerCase(),
       media,
-      caption: caption || "A fresh update from Daisy.",
+      caption: caption || `A fresh update from ${activeAccount.name}.`,
       hashtags: caption.match(/#[\w]+/g) || ["#friends"],
       tags: caption.match(/@[\w.]+/g) || [],
       audience: composerAudience,
@@ -608,6 +698,47 @@ export default function FriendsApp() {
     setPostComments((current) => ({ ...current, [newPost.id]: [] }));
     resetComposer();
     showToast(`${composerMode} published to ${composerAudience.toLowerCase()}`);
+  }
+
+  function deletePost(postId) {
+    if (typeof window !== "undefined" && !window.confirm("Delete this post? This can't be undone.")) {
+      return;
+    }
+    setDraftPosts((current) => current.filter((post) => post.id !== postId));
+    setMediaIndex((current) => {
+      const next = { ...current };
+      delete next[postId];
+      return next;
+    });
+    setPostComments((current) => {
+      const next = { ...current };
+      delete next[postId];
+      return next;
+    });
+    setCommentDrafts((current) => {
+      const next = { ...current };
+      delete next[postId];
+      return next;
+    });
+    setLikedPosts((current) => {
+      if (!current.has(postId)) return current;
+      const next = new Set(current);
+      next.delete(postId);
+      return next;
+    });
+    setSavedPosts((current) => {
+      if (!current.has(postId)) return current;
+      const next = new Set(current);
+      next.delete(postId);
+      return next;
+    });
+    setRepostedPosts((current) => {
+      if (!current.has(postId)) return current;
+      const next = new Set(current);
+      next.delete(postId);
+      return next;
+    });
+    showToast("Post deleted");
   }
 
   function defaultScheduleValue() {
@@ -1041,7 +1172,7 @@ export default function FriendsApp() {
                 onClick={() => { setSelectedStory(story.id); routeTo("stories"); }}
                 className="flex min-w-[4rem] flex-col items-center gap-2 text-center"
               >
-                <Avatar label={story.avatar} seed={story.user} active={story.id === selectedStory} />
+                <Avatar label={story.avatar} imageSrc={story.avatarPhoto} seed={story.user} active={story.id === selectedStory} />
                 <span className="w-full truncate text-xs font-medium text-slate-600">{story.user}</span>
               </button>
             ))}
@@ -1064,8 +1195,34 @@ export default function FriendsApp() {
               <Icon name="close" className="size-4" />
             </button>
           </div>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Posting as</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {accounts.map((account) => {
+                const isActive = account.id === activeAccount.id;
+                return (
+                  <button
+                    key={account.id}
+                    type="button"
+                    onClick={() => setActiveAccountId(account.id)}
+                    aria-pressed={isActive}
+                    title={`Post as ${account.name}`}
+                    className={cx(
+                      "inline-flex h-8 items-center gap-2 rounded-full pl-1 pr-3 text-xs font-medium transition",
+                      isActive
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50"
+                    )}
+                  >
+                    <Avatar label={account.avatar} imageSrc={account.photo} seed={account.handle} size="sm" />
+                    <span className="max-w-[10rem] truncate">{account.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="flex gap-3">
-            <Avatar label={userProfile.avatar} imageSrc={userProfile.photo} seed={userProfile.handle} />
+            <Avatar label={activeAccount.avatar} imageSrc={activeAccount.photo} seed={activeAccount.handle} />
             <div className="min-w-0 flex-1">
               <textarea
                 id="composer-input"
@@ -1306,16 +1463,29 @@ export default function FriendsApp() {
               {post.audience ? ` · ${post.audience}` : ""}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => toggleSet(setFollowed, post.author, following ? `Unfollowed ${post.author}` : `Following ${post.author}`)}
-            className={cx(
-              "h-8 rounded-2xl px-3 text-xs font-medium transition",
-              following ? "border border-blue-100 bg-blue-50 text-slate-700 hover:bg-slate-50" : "bg-blue-600 text-white hover:bg-blue-700"
-            )}
-          >
-            {following ? "Following" : "Follow"}
-          </button>
+          {userAccountHandles.has(post.author) ? (
+            <button
+              type="button"
+              onClick={() => deletePost(post.id)}
+              aria-label="Delete post"
+              title="Delete post"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white px-3 text-xs font-medium text-red-600 ring-1 ring-red-100 transition hover:bg-red-50 hover:ring-red-200"
+            >
+              <Icon name="close" className="size-3.5" />
+              Delete
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => toggleSet(setFollowed, post.author, following ? `Unfollowed ${post.author}` : `Following ${post.author}`)}
+              className={cx(
+                "h-8 rounded-2xl px-3 text-xs font-medium transition",
+                following ? "border border-blue-100 bg-blue-50 text-slate-700 hover:bg-slate-50" : "bg-blue-600 text-white hover:bg-blue-700"
+              )}
+            >
+              {following ? "Following" : "Follow"}
+            </button>
+          )}
         </header>
 
         <div className="px-5">
@@ -1437,6 +1607,21 @@ export default function FriendsApp() {
   }
 
   function renderStories() {
+    if (!selectedStoryData) {
+      return (
+        <div className="space-y-8">
+          <ViewHeader eyebrow="24 hours" title="Stories">
+            <PrimaryButton icon="plus" onClick={() => openComposer("Story")}>
+              Create story
+            </PrimaryButton>
+          </ViewHeader>
+          <Card className="p-10 text-center">
+            <h2 className="text-base font-semibold text-slate-900">No stories yet</h2>
+            <p className="mt-1 text-sm text-slate-500">Tap Create story to share your first one.</p>
+          </Card>
+        </div>
+      );
+    }
     return (
       <div className="space-y-8">
         <ViewHeader eyebrow="24 hours" title="Stories">
@@ -1457,7 +1642,7 @@ export default function FriendsApp() {
                   story.id === selectedStoryData.id ? "bg-blue-600 text-white" : "text-slate-700 hover:bg-slate-50"
                 )}
               >
-                <Avatar label={story.avatar} seed={story.user} active={story.id === selectedStoryData.id} />
+                <Avatar label={story.avatar} imageSrc={story.avatarPhoto} seed={story.user} active={story.id === selectedStoryData.id} />
                 <span className="max-w-24 truncate text-xs font-medium">{story.user}</span>
               </button>
             ))}
@@ -1470,7 +1655,7 @@ export default function FriendsApp() {
             <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <Avatar label={selectedStoryData.avatar} seed={selectedStoryData.user} size="sm" />
+                  <Avatar label={selectedStoryData.avatar} imageSrc={selectedStoryData.avatarPhoto} seed={selectedStoryData.user} size="sm" />
                   <div>
                     <strong className="block text-sm font-semibold text-white">{selectedStoryData.user}</strong>
                     <span className="text-xs text-white/70">{selectedStoryData.expires} left</span>
@@ -1575,16 +1760,8 @@ export default function FriendsApp() {
             const saved = savedReels.has(reel.id);
             return (
               <Card as="article" key={reel.id} className="overflow-hidden">
-                <MediaFrame item={{ src: reel.src, alt: reel.title, type: "video", duration: "0:20" }} tall>
-                  <button
-                    type="button"
-                    onClick={() => showToast(`Playing ${reel.title}`)}
-                    className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-slate-900 shadow-sm transition hover:bg-blue-50"
-                    aria-label={`Play ${reel.title}`}
-                  >
-                    <Icon name="play" className="size-5 translate-x-0.5" />
-                  </button>
-                </MediaFrame>
+                <ReelPlayer reel={reel} />
+
                 <div className="space-y-3 p-5">
                   <div className="flex items-center gap-3">
                     <Avatar label={reel.avatar} seed={reel.author} size="sm" />
@@ -1627,6 +1804,12 @@ export default function FriendsApp() {
             );
           })}
         </div>
+        {reels.length === 0 ? (
+          <Card className="p-10 text-center">
+            <h2 className="text-base font-semibold text-slate-900">No reels yet</h2>
+            <p className="mt-1 text-sm text-slate-500">Tap New reel to record your first one.</p>
+          </Card>
+        ) : null}
       </div>
     );
   }
@@ -2064,7 +2247,7 @@ export default function FriendsApp() {
                 }}
                 className="flex min-w-44 items-center gap-3 rounded-3xl border border-blue-100 bg-blue-50 p-3 text-left transition hover:bg-slate-50"
               >
-                <Avatar label={story.avatar} seed={story.user} size="sm" />
+                <Avatar label={story.avatar} imageSrc={story.avatarPhoto} seed={story.user} size="sm" />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-slate-900">{story.highlight}</span>
                   <span className="block truncate text-xs text-slate-500">{story.user}</span>

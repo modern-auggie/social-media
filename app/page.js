@@ -812,20 +812,72 @@ export default function FriendsApp() {
       setComposerOpen(true);
       return;
     }
-    setSavedDrafts((current) => [
-      {
-        id: `saved-draft-${Date.now()}`,
-        mode: composerMode,
-        caption,
-        asset: uploadAssetLabel(composerUploads, activeMediaPreset.label),
-        uploads: composerUploads,
-        audience: composerAudience,
-        location: composerLocation
-      },
-      ...current
-    ]);
-    resetComposer();
+    const draft = {
+      id: `saved-draft-${Date.now()}`,
+      mode: composerMode,
+      caption,
+      asset: uploadAssetLabel(composerUploads, activeMediaPreset.label),
+      uploads: composerUploads,
+      audience: composerAudience,
+      location: composerLocation,
+      savedAt: Date.now()
+    };
+    setSavedDrafts((current) => [draft, ...current]);
     showToast("Draft saved");
+  }
+
+  function loadDraft(draftId) {
+    const draft = savedDrafts.find((item) => item.id === draftId);
+    if (!draft) return;
+    setComposerText(draft.caption || "");
+    setComposerMode(draft.mode || "Photo");
+    setComposerUploads(normalizeUploads(draft.uploads || draft.upload));
+    setComposerAudience(draft.audience || "Close friends");
+    setComposerLocation(draft.location || "Shared from Friends");
+    setSavedDrafts((current) => current.filter((item) => item.id !== draftId));
+    setComposerOpen(true);
+    routeTo("feed");
+    showToast("Draft loaded into composer");
+  }
+
+  function deleteDraft(draftId) {
+    setSavedDrafts((current) => current.filter((item) => item.id !== draftId));
+    showToast("Draft deleted");
+  }
+
+  function publishDraft(draftId) {
+    const draft = savedDrafts.find((item) => item.id === draftId);
+    if (!draft) return;
+    const isReel = draft.mode === "Reel";
+    const uploads = normalizeUploads(draft.uploads || draft.upload);
+    const media = isReel
+      ? [{ type: "video", src: "/assets/reel-dance.png", alt: `${draft.mode} preview`, duration: "0:12" }]
+      : (uploads.length ? uploads : [activeMediaPreset]).map((image) => ({
+          type: "photo",
+          src: image.src,
+          alt: image.name || image.label || `${draft.mode} preview`
+        }));
+    const newPost = {
+      id: `draft-${Date.now()}`,
+      author: activeAccount.handle,
+      avatar: activeAccount.avatar,
+      avatarImage: activeAccount.photo || "",
+      location: (draft.location || "Shared from Friends").trim() || "Shared from Friends",
+      published: "now",
+      type: !isReel && media.length > 1 ? "carousel" : (draft.mode || "Photo").toLowerCase(),
+      media,
+      caption: draft.caption || `A fresh update from ${activeAccount.name}.`,
+      hashtags: (draft.caption || "").match(/#[\w]+/g) || ["#friends"],
+      tags: (draft.caption || "").match(/@[\w.]+/g) || [],
+      audience: draft.audience || "Close friends",
+      stats: { likes: 0, comments: 0, saves: 0, shares: 0 },
+      comments: []
+    };
+    setDraftPosts((current) => [newPost, ...current]);
+    setMediaIndex((current) => ({ ...current, [newPost.id]: 0 }));
+    setPostComments((current) => ({ ...current, [newPost.id]: [] }));
+    setSavedDrafts((current) => current.filter((item) => item.id !== draftId));
+    showToast("Draft published");
   }
 
   async function sharePost(post) {
@@ -1182,7 +1234,14 @@ export default function FriendsApp() {
         {composerOpen ? (
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">New post</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+              New post
+              {savedDrafts.length > 0 ? (
+                <span className="ml-2 inline-flex h-5 items-center rounded-full bg-blue-100 px-2 text-[10px] font-semibold text-blue-700">
+                  {savedDrafts.length} draft{savedDrafts.length === 1 ? "" : "s"}
+                </span>
+              ) : null}
+            </p>
             <button
               type="button"
               onClick={() => {
@@ -1195,6 +1254,43 @@ export default function FriendsApp() {
               <Icon name="close" className="size-4" />
             </button>
           </div>
+          {savedDrafts.length > 0 ? (
+            <div className="mb-3 space-y-2 rounded-2xl bg-blue-100/60 p-3">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Saved drafts</p>
+              <div className="space-y-2">
+                {savedDrafts.map((draft) => (
+                  <div key={draft.id} className="flex items-center gap-2 rounded-xl bg-white px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-slate-900">{draft.caption}</p>
+                      <p className="truncate text-[11px] text-slate-500">{draft.mode}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => loadDraft(draft.id)}
+                      className="h-7 rounded-full px-2.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => publishDraft(draft.id)}
+                      className="h-7 rounded-full bg-blue-600 px-2.5 text-xs font-medium text-white hover:bg-blue-700"
+                    >
+                      Publish
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteDraft(draft.id)}
+                      aria-label="Delete draft"
+                      className="grid size-7 place-items-center rounded-full text-slate-500 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Icon name="close" className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Posting as</span>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -2314,31 +2410,54 @@ export default function FriendsApp() {
               <Pill tone={scheduledPosts.length ? "info" : "neutral"}>{scheduledPosts.length} scheduled</Pill>
             </div>
             <div className="mt-4 space-y-3">
-              {[...scheduledPosts, ...savedDrafts].slice(0, 5).map((item) => (
-                <div key={item.id} className="flex flex-col gap-3 rounded-2xl border border-blue-100 p-3 sm:flex-row sm:items-center">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-900">{item.caption}</p>
-                    <p className="text-xs text-slate-500">
-                      {item.mode} · {item.asset} · {item.scheduledFor || "Draft"}
-                    </p>
+              {[...scheduledPosts, ...savedDrafts].slice(0, 5).map((item) => {
+                const isDraft = !item.scheduledFor;
+                return (
+                  <div key={item.id} className="flex flex-col gap-3 rounded-2xl border border-blue-100 p-3 sm:flex-row sm:items-center">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900">{item.caption}</p>
+                      <p className="text-xs text-slate-500">
+                        {item.mode} · {item.asset} · {item.scheduledFor || "Draft"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <SecondaryButton
+                        icon="calendar"
+                        onClick={() => {
+                          if (isDraft) {
+                            loadDraft(item.id);
+                          } else {
+                            setComposerText(item.caption);
+                            setComposerMode(item.mode);
+                            setComposerUploads(normalizeUploads(item.uploads || item.upload));
+                            setComposerOpen(true);
+                            routeTo("feed");
+                          }
+                        }}
+                      >
+                        Edit
+                      </SecondaryButton>
+                      {isDraft ? (
+                        <>
+                          <PrimaryButton icon="upload" onClick={() => publishDraft(item.id)}>
+                            Publish
+                          </PrimaryButton>
+                          <button
+                            type="button"
+                            onClick={() => deleteDraft(item.id)}
+                            aria-label="Delete draft"
+                            className="grid size-9 place-items-center rounded-full text-slate-500 ring-1 ring-blue-100 hover:bg-red-50 hover:text-red-600 hover:ring-red-200"
+                          >
+                            <Icon name="close" className="size-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <Pill tone="info">Queued</Pill>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <SecondaryButton
-                      icon="calendar"
-                      onClick={() => {
-                        setComposerText(item.caption);
-                        setComposerMode(item.mode);
-                        setComposerUploads(normalizeUploads(item.uploads || item.upload));
-                        setComposerOpen(true);
-                        routeTo("feed");
-                      }}
-                    >
-                      Edit
-                    </SecondaryButton>
-                    {item.scheduledFor ? <Pill tone="info">Queued</Pill> : <Pill tone="neutral">Draft</Pill>}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {scheduledPosts.length === 0 && savedDrafts.length === 0 ? (
                 <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">Use the feed composer to save drafts or schedule a post; they will appear here.</p>
               ) : null}

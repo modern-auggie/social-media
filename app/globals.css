@@ -2,12 +2,12 @@
 
 :root {
   color-scheme: light;
-  --background: #fafaf9;
-  --foreground: #0c0a09;
-  --muted: #57534e;
-  --border: #e7e5e4;
+  --background: #dbeafe;
+  --foreground: #0f172a;
+  --muted: #475569;
+  --border: #e2e8f0;
   --surface: #ffffff;
-  --accent: #0c0a09;
+  --accent: #2563eb;
 }
 
 * {
@@ -56,7 +56,7 @@ img {
 }
 
 ::selection {
-  background: #0c0a09;
+  background: #2563eb;
   color: #ffffff;
 }
 

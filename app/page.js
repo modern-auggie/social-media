@@ -77,7 +77,13 @@ function formatNumber(value) {
   return `${(value / 1000).toFixed(value > 9999 ? 0 : 1)}K`;
 }
 
-function Avatar({ label, imageSrc, size = "md", active = false }) {
+function avatarUrlForSeed(seed) {
+  if (!seed) return null;
+  const key = String(seed).toLowerCase().replace(/[^a-z0-9.-]/g, "-");
+  return `https://picsum.photos/seed/avatar-${key}/200/200`;
+}
+
+function Avatar({ label, imageSrc, seed, size = "md", active = false }) {
   const sizes = {
     sm: "size-8 text-[0.7rem]",
     md: "size-10 text-xs",
@@ -85,28 +91,30 @@ function Avatar({ label, imageSrc, size = "md", active = false }) {
     xl: "size-20 text-lg"
   };
 
+  const resolvedSrc = imageSrc || avatarUrlForSeed(seed);
+
   return (
     <span
       className={cx(
-        "grid shrink-0 place-items-center rounded-full bg-stone-100 font-medium text-stone-700",
+        "grid shrink-0 overflow-hidden place-items-center rounded-full bg-slate-100 font-medium text-slate-700",
         sizes[size],
-        active && "ring-2 ring-stone-900 ring-offset-2 ring-offset-white"
+        active && "ring-2 ring-blue-600 ring-offset-2 ring-offset-white"
       )}
       aria-hidden="true"
     >
-      {imageSrc ? <img src={imageSrc} alt="" className="size-full rounded-full object-cover" /> : label}
+      {resolvedSrc ? <img src={resolvedSrc} alt="" className="size-full rounded-full object-cover" /> : label}
     </span>
   );
 }
 
 function Pill({ children, tone = "neutral" }) {
   const tones = {
-    neutral: "bg-stone-100 text-stone-700",
+    neutral: "bg-slate-100 text-slate-700",
     info: "bg-blue-50 text-blue-700",
     warn: "bg-amber-50 text-amber-800",
     success: "bg-emerald-50 text-emerald-700",
     danger: "bg-red-50 text-red-700",
-    dark: "bg-stone-900 text-white"
+    dark: "bg-blue-600 text-white"
   };
   return (
     <span className={cx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>
@@ -124,10 +132,10 @@ function IconButton({ icon, label, active = false, className = "", children, onC
       title={label}
       onClick={onClick}
       className={cx(
-        "inline-flex h-9 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-medium transition",
-        "border-stone-200 bg-white text-stone-700 hover:border-stone-300 hover:bg-stone-50",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900",
-        active && "border-stone-900 bg-stone-900 text-white hover:bg-stone-800 hover:border-stone-900",
+        "inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition",
+        "bg-white text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50 hover:ring-blue-200",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
+        active && "bg-blue-600 text-white ring-blue-600 hover:bg-blue-700",
         className
       )}
     >
@@ -143,8 +151,8 @@ function PrimaryButton({ icon, children, onClick, type = "button", className = "
       type={type}
       onClick={onClick}
       className={cx(
-        "inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-stone-900 px-4 text-sm font-medium text-white transition",
-        "hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900",
+        "inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-blue-600 px-5 text-sm font-medium text-white shadow-[0_8px_18px_-8px_rgba(37,99,235,0.55)] transition",
+        "hover:bg-blue-700 hover:shadow-[0_10px_22px_-8px_rgba(37,99,235,0.65)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
         className
       )}
     >
@@ -160,8 +168,8 @@ function SecondaryButton({ icon, children, onClick, type = "button", className =
       type={type}
       onClick={onClick}
       className={cx(
-        "inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-stone-200 bg-white px-4 text-sm font-medium text-stone-800 transition",
-        "hover:border-stone-300 hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900",
+        "inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-white px-5 text-sm font-medium text-slate-800 ring-1 ring-blue-100 transition",
+        "hover:bg-blue-50 hover:ring-blue-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
         className
       )}
     >
@@ -173,11 +181,11 @@ function SecondaryButton({ icon, children, onClick, type = "button", className =
 
 function ViewHeader({ eyebrow, title, description, children }) {
   return (
-    <div className="flex flex-col gap-4 border-b border-stone-200 pb-6 md:flex-row md:items-end md:justify-between">
+    <div className="flex flex-col gap-4 pb-2 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wider text-stone-500">{eyebrow}</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900 sm:text-[28px]">{title}</h1>
-        {description ? <p className="mt-1.5 text-sm text-stone-600">{description}</p> : null}
+        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{eyebrow}</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">{title}</h1>
+        {description ? <p className="mt-1.5 text-sm text-slate-600">{description}</p> : null}
       </div>
       {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
     </div>
@@ -186,10 +194,10 @@ function ViewHeader({ eyebrow, title, description, children }) {
 
 function MediaFrame({ item, children, tall = false }) {
   return (
-    <figure className={cx("relative overflow-hidden rounded-md bg-stone-100", tall ? "aspect-[9/14]" : "aspect-[4/3]")}>
+    <figure className={cx("relative overflow-hidden rounded-2xl bg-slate-100", tall ? "aspect-[9/14]" : "aspect-[4/3]")}>
       <img className="size-full object-cover" src={item.src} alt={item.alt || ""} loading="lazy" />
       {item.type === "video" ? (
-        <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded bg-stone-900/85 px-2 py-0.5 text-[11px] font-medium text-white">
+        <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded bg-blue-600/85 px-2 py-0.5 text-[11px] font-medium text-white">
           <Icon name="play" className="size-3" />
           {item.duration || "Video"}
         </span>
@@ -201,7 +209,7 @@ function MediaFrame({ item, children, tall = false }) {
 
 function Card({ className = "", children, as: As = "section" }) {
   return (
-    <As className={cx("min-w-0 rounded-lg border border-stone-200 bg-white", className)}>
+    <As className={cx("min-w-0 rounded-3xl bg-blue-50 shadow-[0_8px_24px_-12px_rgba(30,64,175,0.18)] ring-1 ring-blue-100/70", className)}>
       {children}
     </As>
   );
@@ -852,7 +860,7 @@ export default function FriendsApp() {
     } catch (error) {
       if (typeof console !== "undefined") console.error(`[Friends] render '${view}' failed:`, error);
       return (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-900">
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-900">
           <p className="font-semibold">This view hit a render error.</p>
           <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs">
             {String(error?.message || error)}
@@ -860,7 +868,7 @@ export default function FriendsApp() {
           <button
             type="button"
             onClick={() => routeTo("feed")}
-            className="mt-4 inline-flex h-9 items-center rounded-md bg-stone-900 px-4 text-sm font-medium text-white"
+            className="mt-4 inline-flex h-9 items-center rounded-2xl bg-blue-600 px-4 text-sm font-medium text-white"
           >
             Back to Feed
           </button>
@@ -870,33 +878,33 @@ export default function FriendsApp() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900">
-      <header className="sticky top-0 z-40 border-b border-stone-200 bg-white/80 backdrop-blur">
+    <div className="min-h-screen bg-blue-100 text-slate-900">
+      <header className="sticky top-0 z-40 bg-blue-100/80 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-[1280px] items-center gap-6 px-6">
           <button
             type="button"
             onClick={() => routeTo("feed")}
-            className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-stone-900"
+            className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-slate-900"
           >
-            <span className="grid size-7 place-items-center rounded-md bg-stone-900 text-white">
+            <span className="grid size-7 place-items-center rounded-2xl bg-blue-600 text-white">
               <Icon name="wink" className="size-4" />
             </span>
             Friends
           </button>
 
           <form
-            className="hidden h-9 max-w-md flex-1 items-center gap-2 rounded-md border border-stone-200 bg-stone-50 px-3 md:flex"
+            className="hidden h-9 max-w-md flex-1 items-center gap-2 rounded-2xl border border-blue-100 bg-slate-50 px-3 md:flex"
             onSubmit={(event) => {
               event.preventDefault();
               routeTo("explore");
               showToast(search ? `Searching for ${search}` : "Showing Explore");
             }}
           >
-            <Icon name="search" className="size-4 shrink-0 text-stone-400" />
+            <Icon name="search" className="size-4 shrink-0 text-slate-400" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
+              className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
               placeholder="Search"
               aria-label="Search"
             />
@@ -912,13 +920,13 @@ export default function FriendsApp() {
               className="flex items-center"
               aria-label="Open profile"
             >
-              <Avatar label={userProfile.avatar} imageSrc={userProfile.photo} size="sm" />
+              <Avatar label={userProfile.avatar} imageSrc={userProfile.photo} seed={userProfile.handle} size="sm" />
             </button>
           </div>
         </div>
       </header>
 
-      <nav className="border-b border-stone-200 bg-white lg:hidden" aria-label="Primary mobile">
+      <nav className="border-b border-blue-100 bg-blue-50 lg:hidden" aria-label="Primary mobile">
         <div className="mx-auto flex w-full max-w-[1280px] flex-wrap gap-1 px-4 py-2 sm:px-6">
           {navItems.map((item) => (
             <button
@@ -926,8 +934,8 @@ export default function FriendsApp() {
               type="button"
               onClick={() => routeTo(item.id)}
               className={cx(
-                "inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition",
-                view === item.id ? "bg-stone-900 text-white" : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                "inline-flex h-9 items-center gap-1.5 rounded-2xl px-3 text-sm font-medium transition",
+                view === item.id ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               )}
             >
               <Icon name={item.icon} className="size-4 shrink-0" />
@@ -946,10 +954,10 @@ export default function FriendsApp() {
                 type="button"
                 onClick={() => routeTo(item.id)}
                 className={cx(
-                  "flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium transition",
+                  "flex h-9 items-center gap-3 rounded-2xl px-3 text-sm font-medium transition",
                   view === item.id
-                    ? "bg-stone-900 text-white"
-                    : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 )}
               >
                 <Icon name={item.icon} className="size-4 shrink-0" />
@@ -958,13 +966,13 @@ export default function FriendsApp() {
             ))}
           </nav>
 
-          <div className="mt-8 border-t border-stone-200 pt-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-stone-500">Signed in</p>
+          <div className="mt-8 border-t border-blue-100 pt-6">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Signed in</p>
             <div className="mt-3 flex items-center gap-3">
-              <Avatar label={userProfile.avatar} imageSrc={userProfile.photo} size="sm" />
+              <Avatar label={userProfile.avatar} imageSrc={userProfile.photo} seed={userProfile.handle} size="sm" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-stone-900">{userProfile.name}</p>
-                <p className="truncate text-xs text-stone-500">@{userProfile.handle}</p>
+                <p className="truncate text-sm font-medium text-slate-900">{userProfile.name}</p>
+                <p className="truncate text-xs text-slate-500">@{userProfile.handle}</p>
               </div>
             </div>
           </div>
@@ -978,7 +986,7 @@ export default function FriendsApp() {
       </div>
 
       {toast ? (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-md bg-stone-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
           {toast}
         </div>
       ) : null}
@@ -989,7 +997,7 @@ export default function FriendsApp() {
     return (
       <div className="space-y-8">
         <ViewHeader eyebrow="Today" title="Feed" description="Updates from people you follow.">
-          <div className="flex rounded-md border border-stone-200 bg-white p-0.5">
+          <div className="flex rounded-2xl border border-blue-100 bg-blue-50 p-0.5">
             {["For You", "Following", "Saved"].map((mode) => (
               <button
                 key={mode}
@@ -997,14 +1005,14 @@ export default function FriendsApp() {
                 onClick={() => setFeedMode(mode)}
                 className={cx(
                   "h-8 rounded px-3 text-sm font-medium transition",
-                  feedMode === mode ? "bg-stone-900 text-white" : "text-stone-600 hover:text-stone-900"
+                  feedMode === mode ? "bg-blue-600 text-white" : "text-slate-600 hover:text-slate-900"
                 )}
               >
                 {mode}
               </button>
             ))}
           </div>
-          <div className="flex rounded-md border border-stone-200 bg-white p-0.5">
+          <div className="flex rounded-2xl border border-blue-100 bg-blue-50 p-0.5">
             {["Photo", "Reel", "Story"].map((mode) => (
               <button
                 key={mode}
@@ -1013,8 +1021,8 @@ export default function FriendsApp() {
                 className={cx(
                   "h-8 rounded px-3 text-sm font-medium transition",
                   composerMode === mode && composerOpen
-                    ? "bg-stone-900 text-white"
-                    : "text-stone-600 hover:text-stone-900"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-600 hover:text-slate-900"
                 )}
               >
                 {mode}
@@ -1024,7 +1032,7 @@ export default function FriendsApp() {
         </ViewHeader>
 
         <Card className="p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-stone-500">Stories</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Stories</p>
           <div className="no-scrollbar mt-3 flex gap-5 overflow-x-auto">
             {stories.map((story) => (
               <button
@@ -1033,16 +1041,31 @@ export default function FriendsApp() {
                 onClick={() => { setSelectedStory(story.id); routeTo("stories"); }}
                 className="flex min-w-[4rem] flex-col items-center gap-2 text-center"
               >
-                <Avatar label={story.avatar} active={story.id === selectedStory} />
-                <span className="w-full truncate text-xs font-medium text-stone-600">{story.user}</span>
+                <Avatar label={story.avatar} seed={story.user} active={story.id === selectedStory} />
+                <span className="w-full truncate text-xs font-medium text-slate-600">{story.user}</span>
               </button>
             ))}
           </div>
         </Card>
 
+        {composerOpen ? (
         <Card className="p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">New post</p>
+            <button
+              type="button"
+              onClick={() => {
+                setComposerOpen(false);
+                setScheduleOpen(false);
+              }}
+              aria-label="Close composer"
+              className="grid size-8 place-items-center rounded-full text-slate-500 hover:bg-blue-100 hover:text-slate-900"
+            >
+              <Icon name="close" className="size-4" />
+            </button>
+          </div>
           <div className="flex gap-3">
-            <Avatar label={userProfile.avatar} imageSrc={userProfile.photo} />
+            <Avatar label={userProfile.avatar} imageSrc={userProfile.photo} seed={userProfile.handle} />
             <div className="min-w-0 flex-1">
               <textarea
                 id="composer-input"
@@ -1050,31 +1073,31 @@ export default function FriendsApp() {
                 onFocus={() => setComposerOpen(true)}
                 onChange={(event) => setComposerText(event.target.value)}
                 rows={composerOpen ? 3 : 1}
-                className="w-full resize-none rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 outline-none placeholder:text-stone-400 focus:border-stone-900"
+                className="w-full resize-none rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-600"
                 placeholder="Share something with your friends"
               />
               {composerOpen ? (
                 <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
                   <div className="space-y-3">
                     <div className="grid gap-2 sm:grid-cols-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                      <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
                         Audience
                         <select
                           value={composerAudience}
                           onChange={(event) => setComposerAudience(event.target.value)}
-                          className="mt-1 h-9 w-full rounded-md border border-stone-200 bg-white px-3 text-sm font-normal normal-case tracking-normal text-stone-800 outline-none focus:border-stone-900"
+                          className="mt-1 h-9 w-full rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm font-normal normal-case tracking-normal text-slate-800 outline-none focus:border-blue-600"
                         >
                           {["Close friends", "Followers", "Public", "Collaborators"].map((item) => (
                             <option key={item}>{item}</option>
                           ))}
                         </select>
                       </label>
-                      <label className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                      <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
                         Location
                         <input
                           value={composerLocation}
                           onChange={(event) => setComposerLocation(event.target.value)}
-                          className="mt-1 h-9 w-full rounded-md border border-stone-200 bg-white px-3 text-sm font-normal normal-case tracking-normal text-stone-800 outline-none focus:border-stone-900"
+                          className="mt-1 h-9 w-full rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm font-normal normal-case tracking-normal text-slate-800 outline-none focus:border-blue-600"
                         />
                       </label>
                     </div>
@@ -1088,10 +1111,10 @@ export default function FriendsApp() {
                             setComposerUploads([]);
                           }}
                           className={cx(
-                            "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition",
+                            "inline-flex h-8 items-center gap-1.5 rounded-2xl border px-2.5 text-xs font-medium transition",
                             composerAsset === preset.id && !composerUploads.length
-                              ? "border-stone-900 bg-stone-900 text-white"
-                              : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                              ? "border-blue-600 bg-blue-600 text-white"
+                              : "border-blue-100 bg-blue-50 text-slate-600 hover:bg-slate-50"
                           )}
                         >
                           <Icon name={preset.icon} className="size-3.5" />
@@ -1102,7 +1125,7 @@ export default function FriendsApp() {
                         <button
                           type="button"
                           onClick={() => setComposerUploads([])}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-600 transition hover:bg-stone-50"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-2xl border border-blue-100 bg-blue-50 px-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                         >
                           <Icon name="close" className="size-3.5" />
                           Clear uploads
@@ -1112,12 +1135,12 @@ export default function FriendsApp() {
                     {composerUploads.length ? (
                       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                         {composerUploads.map((upload, index) => (
-                          <div key={upload.uploadedAt} className="min-w-0 rounded-md border border-stone-200 bg-white p-2">
+                          <div key={upload.uploadedAt} className="min-w-0 rounded-2xl border border-blue-100 bg-blue-50 p-2">
                             <div className="flex gap-2">
                               <img src={upload.src} alt="" className="size-14 shrink-0 rounded object-cover" />
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-xs font-medium text-stone-800">{upload.name}</p>
-                                <p className="mt-0.5 text-[11px] text-stone-500">Photo {index + 1}</p>
+                                <p className="truncate text-xs font-medium text-slate-800">{upload.name}</p>
+                                <p className="mt-0.5 text-[11px] text-slate-500">Photo {index + 1}</p>
                                 <div className="mt-2 flex gap-1">
                                   <IconButton
                                     icon="chevronLeft"
@@ -1145,13 +1168,13 @@ export default function FriendsApp() {
                       </div>
                     ) : null}
                   </div>
-                  <figure className="overflow-hidden rounded-md border border-stone-200 bg-stone-100">
+                  <figure className="overflow-hidden rounded-2xl border border-blue-100 bg-slate-100">
                     <img
                       src={composerPreview.src}
                       alt=""
                       className="aspect-video w-full object-cover"
                     />
-                    <figcaption className="flex items-center justify-between px-3 py-2 text-xs text-stone-500">
+                    <figcaption className="flex items-center justify-between px-3 py-2 text-xs text-slate-500">
                       <span className="truncate">
                         {composerUploads.length ? uploadAssetLabel(composerUploads, activeMediaPreset.label) : composerPreview.label || `${composerMode} preview`}
                       </span>
@@ -1161,7 +1184,7 @@ export default function FriendsApp() {
                 </div>
               ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-stone-200 bg-white px-2.5 text-xs font-medium text-stone-600 transition hover:bg-stone-50">
+                <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-2xl border border-blue-100 bg-blue-50 px-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50">
                   <Icon name="upload" className="size-3.5" />
                   Upload
                   <input
@@ -1192,10 +1215,10 @@ export default function FriendsApp() {
                       setComposerOpen(true);
                     }}
                     className={cx(
-                      "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition",
+                      "inline-flex h-8 items-center gap-1.5 rounded-2xl border px-2.5 text-xs font-medium transition",
                       composerMode === label
-                        ? "border-stone-900 bg-stone-900 text-white"
-                        : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-blue-100 bg-blue-50 text-slate-600 hover:bg-slate-50"
                     )}
                   >
                     <Icon name={icon} className="size-3.5" />
@@ -1210,15 +1233,15 @@ export default function FriendsApp() {
                 </PrimaryButton>
               </div>
               {scheduleOpen ? (
-                <div className="mt-3 flex flex-col gap-3 rounded-md border border-stone-200 bg-stone-50 p-3 sm:flex-row sm:items-end">
+                <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-slate-50 p-3 sm:flex-row sm:items-end">
                   <label className="flex flex-1 flex-col gap-1.5">
-                    <span className="text-xs font-medium uppercase tracking-wider text-stone-500">Send at</span>
+                    <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Send at</span>
                     <input
                       type="datetime-local"
                       value={scheduleAt}
                       min={defaultScheduleValue()}
                       onChange={(event) => setScheduleAt(event.target.value)}
-                      className="h-9 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-900 outline-none focus:border-stone-900"
+                      className="h-9 rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm text-slate-900 outline-none focus:border-blue-600"
                     />
                   </label>
                   <div className="flex gap-2">
@@ -1240,14 +1263,15 @@ export default function FriendsApp() {
             </div>
           </div>
         </Card>
+        ) : null}
 
         <div className="space-y-6">
           {visibleFeedPosts.map((post) => renderPost(post))}
         </div>
         {visibleFeedPosts.length === 0 ? (
           <Card className="p-10 text-center">
-            <h2 className="text-base font-semibold text-stone-900">Nothing here yet</h2>
-            <p className="mt-1 text-sm text-stone-500">Try another feed filter or save a post to build this view.</p>
+            <h2 className="text-base font-semibold text-slate-900">Nothing here yet</h2>
+            <p className="mt-1 text-sm text-slate-500">Try another feed filter or save a post to build this view.</p>
           </Card>
         ) : null}
       </div>
@@ -1271,13 +1295,13 @@ export default function FriendsApp() {
     return (
       <Card as="article" key={post.id}>
         <header className="flex items-center gap-3 px-5 py-4">
-          <Avatar label={post.avatar} imageSrc={avatarImage} />
+          <Avatar label={post.avatar} imageSrc={avatarImage} seed={post.author} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <strong className="truncate text-sm font-semibold text-stone-900">{post.author}</strong>
-              <span className="text-xs text-stone-500">{post.published}</span>
+              <strong className="truncate text-sm font-semibold text-slate-900">{post.author}</strong>
+              <span className="text-xs text-slate-500">{post.published}</span>
             </div>
-            <span className="block truncate text-xs text-stone-500">
+            <span className="block truncate text-xs text-slate-500">
               {post.location}
               {post.audience ? ` · ${post.audience}` : ""}
             </span>
@@ -1286,8 +1310,8 @@ export default function FriendsApp() {
             type="button"
             onClick={() => toggleSet(setFollowed, post.author, following ? `Unfollowed ${post.author}` : `Following ${post.author}`)}
             className={cx(
-              "h-8 rounded-md px-3 text-xs font-medium transition",
-              following ? "border border-stone-200 bg-white text-stone-700 hover:bg-stone-50" : "bg-stone-900 text-white hover:bg-stone-800"
+              "h-8 rounded-2xl px-3 text-xs font-medium transition",
+              following ? "border border-blue-100 bg-blue-50 text-slate-700 hover:bg-slate-50" : "bg-blue-600 text-white hover:bg-blue-700"
             )}
           >
             {following ? "Following" : "Follow"}
@@ -1301,7 +1325,7 @@ export default function FriendsApp() {
                 <button
                   type="button"
                   onClick={() => cycleMedia(post.id, -1)}
-                  className="absolute left-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-stone-900 shadow-sm transition hover:bg-white"
+                  className="absolute left-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-slate-900 shadow-sm transition hover:bg-blue-50"
                   aria-label="Previous media"
                 >
                   <Icon name="chevronLeft" className="size-4" />
@@ -1309,16 +1333,16 @@ export default function FriendsApp() {
                 <button
                   type="button"
                   onClick={() => cycleMedia(post.id, 1)}
-                  className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-stone-900 shadow-sm transition hover:bg-white"
+                  className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-slate-900 shadow-sm transition hover:bg-blue-50"
                   aria-label="Next media"
                 >
                   <Icon name="chevronRight" className="size-4" />
                 </button>
-                <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1 rounded-full bg-stone-900/70 px-2 py-1">
+                <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1 rounded-full bg-blue-600/70 px-2 py-1">
                   {post.media.map((item, dotIndex) => (
                     <span
                       key={`${item.src}-${dotIndex}`}
-                      className={cx("size-1.5 rounded-full", dotIndex === index ? "bg-white" : "bg-white/40")}
+                      className={cx("size-1.5 rounded-full", dotIndex === index ? "bg-blue-50" : "bg-white/40")}
                     />
                   ))}
                 </div>
@@ -1328,7 +1352,7 @@ export default function FriendsApp() {
               <button
                 type="button"
                 onClick={() => routeTo("shop")}
-                className="absolute bottom-3 left-3 inline-flex h-8 items-center gap-1.5 rounded-md bg-white/95 px-2.5 text-xs font-medium text-stone-900 shadow-sm transition hover:bg-white"
+                className="absolute bottom-3 left-3 inline-flex h-8 items-center gap-1.5 rounded-2xl bg-white/95 px-2.5 text-xs font-medium text-slate-900 shadow-sm transition hover:bg-blue-50"
               >
                 <Icon name="tag" className="size-3.5" />
                 {post.product.name} · {post.product.price}
@@ -1370,8 +1394,8 @@ export default function FriendsApp() {
         </div>
 
         <div className="space-y-3 px-5 pb-5">
-          <p className="text-sm leading-6 text-stone-700">
-            <strong className="font-semibold text-stone-900">{post.author}</strong> {post.caption}
+          <p className="text-sm leading-6 text-slate-700">
+            <strong className="font-semibold text-slate-900">{post.author}</strong> {post.caption}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {[...post.hashtags, ...post.tags].map((tag) => (
@@ -1382,15 +1406,15 @@ export default function FriendsApp() {
                   setSearch(tag.replace("#", ""));
                   routeTo("explore");
                 }}
-                className="rounded-md bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600 transition hover:bg-stone-200"
+                className="rounded-2xl bg-blue-100 px-2 py-0.5 text-xs font-medium text-slate-600 transition hover:bg-blue-200"
               >
                 {tag}
               </button>
             ))}
           </div>
-          <div className="space-y-2 border-t border-stone-100 pt-3">
+          <div className="space-y-2 border-t border-slate-100 pt-3">
             {comments.map((comment, commentIndex) => (
-              <p key={`${post.id}-comment-${commentIndex}`} className="text-sm leading-6 text-stone-600">
+              <p key={`${post.id}-comment-${commentIndex}`} className="text-sm leading-6 text-slate-600">
                 {comment}
               </p>
             ))}
@@ -1398,7 +1422,7 @@ export default function FriendsApp() {
               <input
                 value={commentDraft}
                 onChange={(event) => setCommentDrafts((current) => ({ ...current, [post.id]: event.target.value }))}
-                className="h-9 min-w-0 flex-1 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-900 outline-none focus:border-stone-900"
+                className="h-9 min-w-0 flex-1 rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm text-slate-900 outline-none focus:border-blue-600"
                 placeholder="Add a real comment"
                 aria-label={`Comment on ${post.author} post`}
               />
@@ -1429,11 +1453,11 @@ export default function FriendsApp() {
                 type="button"
                 onClick={() => setSelectedStory(story.id)}
                 className={cx(
-                  "flex min-w-24 flex-col items-center gap-2 rounded-md p-3 text-center transition",
-                  story.id === selectedStoryData.id ? "bg-stone-900 text-white" : "text-stone-700 hover:bg-stone-50"
+                  "flex min-w-24 flex-col items-center gap-2 rounded-2xl p-3 text-center transition",
+                  story.id === selectedStoryData.id ? "bg-blue-600 text-white" : "text-slate-700 hover:bg-slate-50"
                 )}
               >
-                <Avatar label={story.avatar} active={story.id === selectedStoryData.id} />
+                <Avatar label={story.avatar} seed={story.user} active={story.id === selectedStoryData.id} />
                 <span className="max-w-24 truncate text-xs font-medium">{story.user}</span>
               </button>
             ))}
@@ -1441,12 +1465,12 @@ export default function FriendsApp() {
         </Card>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="relative overflow-hidden rounded-lg border border-stone-200 bg-stone-900">
+          <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-blue-600">
             <img className="h-[min(72vh,720px)] min-h-[500px] w-full object-cover" src={selectedStoryData.media} alt={selectedStoryData.title} />
             <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <Avatar label={selectedStoryData.avatar} size="sm" />
+                  <Avatar label={selectedStoryData.avatar} seed={selectedStoryData.user} size="sm" />
                   <div>
                     <strong className="block text-sm font-semibold text-white">{selectedStoryData.user}</strong>
                     <span className="text-xs text-white/70">{selectedStoryData.expires} left</span>
@@ -1456,7 +1480,7 @@ export default function FriendsApp() {
                   type="button"
                   onClick={() => routeTo("feed")}
                   aria-label="Close stories"
-                  className="grid size-9 place-items-center rounded-md border border-white/20 bg-white/10 text-white hover:bg-white/20"
+                  className="grid size-9 place-items-center rounded-2xl border border-white/20 bg-white/10 text-white hover:bg-white/20"
                 >
                   <Icon name="close" className="size-4" />
                 </button>
@@ -1470,7 +1494,7 @@ export default function FriendsApp() {
 
           <div className="space-y-4">
             <Card className="p-5">
-              <h2 className="text-sm font-semibold text-stone-900">Story tools</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Story tools</h2>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {selectedStoryData.stickers.map((item) => (
                   <button
@@ -1481,7 +1505,7 @@ export default function FriendsApp() {
                       else if (item === "Link") copyProfileLink();
                       else showToast(`${item} sticker added`);
                     }}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-stone-200 bg-white text-sm font-medium text-stone-700 transition hover:bg-stone-50"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                   >
                     <Icon name={item === "Music" ? "music" : item === "Link" ? "link" : "sparkles"} className="size-4" />
                     {item}
@@ -1492,7 +1516,7 @@ export default function FriendsApp() {
 
             <Card className="p-5">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold text-stone-900">Poll</h2>
+                <h2 className="text-sm font-semibold text-slate-900">Poll</h2>
                 <Pill tone={pollVotes[selectedStoryData.id] ? "success" : "warn"}>
                   {pollVotes[selectedStoryData.id] ? "Voted" : "Open"}
                 </Pill>
@@ -1504,10 +1528,10 @@ export default function FriendsApp() {
                     type="button"
                     onClick={() => voteStory(option)}
                     className={cx(
-                      "flex h-11 w-full items-center justify-between rounded-md border px-3 text-sm font-medium transition",
+                      "flex h-11 w-full items-center justify-between rounded-2xl border px-3 text-sm font-medium transition",
                       pollVotes[selectedStoryData.id] === option
-                        ? "border-stone-900 bg-stone-900 text-white"
-                        : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50"
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-blue-100 bg-blue-50 text-slate-700 hover:bg-slate-50"
                     )}
                   >
                     <span>{option}</span>
@@ -1555,7 +1579,7 @@ export default function FriendsApp() {
                   <button
                     type="button"
                     onClick={() => showToast(`Playing ${reel.title}`)}
-                    className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-stone-900 shadow-sm transition hover:bg-white"
+                    className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-slate-900 shadow-sm transition hover:bg-blue-50"
                     aria-label={`Play ${reel.title}`}
                   >
                     <Icon name="play" className="size-5 translate-x-0.5" />
@@ -1563,13 +1587,13 @@ export default function FriendsApp() {
                 </MediaFrame>
                 <div className="space-y-3 p-5">
                   <div className="flex items-center gap-3">
-                    <Avatar label={reel.avatar} size="sm" />
+                    <Avatar label={reel.avatar} seed={reel.author} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <strong className="block truncate text-sm font-semibold text-stone-900">{reel.author}</strong>
-                      <span className="block truncate text-xs text-stone-500">{reel.audio}</span>
+                      <strong className="block truncate text-sm font-semibold text-slate-900">{reel.author}</strong>
+                      <span className="block truncate text-xs text-slate-500">{reel.audio}</span>
                     </div>
                   </div>
-                  <h2 className="text-base font-semibold tracking-tight text-stone-900">{reel.title}</h2>
+                  <h2 className="text-base font-semibold tracking-tight text-slate-900">{reel.title}</h2>
                   <div className="flex flex-wrap gap-1.5">
                     {reel.effects.map((effect) => (
                       <button
@@ -1580,7 +1604,7 @@ export default function FriendsApp() {
                           routeTo("creator");
                           showToast(`${effect} opened in creator tools`);
                         }}
-                        className="rounded-md bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600 transition hover:bg-stone-200"
+                        className="rounded-2xl bg-blue-100 px-2 py-0.5 text-xs font-medium text-slate-600 transition hover:bg-blue-200"
                       >
                         {effect}
                       </button>
@@ -1611,7 +1635,7 @@ export default function FriendsApp() {
     return (
       <div className="space-y-8">
         <ViewHeader eyebrow="Conversations" title="Messages">
-          <label className="inline-flex h-9 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700">
+          <label className="inline-flex h-9 items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm font-medium text-slate-700">
             <input
               type="checkbox"
               checked={vanishMode}
@@ -1619,21 +1643,21 @@ export default function FriendsApp() {
                 setVanishMode(event.target.checked);
                 showToast(event.target.checked ? "Disappearing mode on" : "Disappearing mode off");
               }}
-              className="size-3.5 accent-stone-900"
+              className="size-3.5 accent-blue-600"
             />
             Disappearing
           </label>
         </ViewHeader>
 
         <Card className="grid min-w-0 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)]">
-          <div className="min-w-0 border-b border-stone-200 lg:border-b-0 lg:border-r">
-            <div className="border-b border-stone-100 p-2">
-              <label className="flex h-9 items-center gap-2 rounded-md border border-stone-200 bg-stone-50 px-3">
-                <Icon name="search" className="size-4 shrink-0 text-stone-400" />
+          <div className="min-w-0 border-b border-blue-100 lg:border-b-0 lg:border-r">
+            <div className="border-b border-slate-100 p-2">
+              <label className="flex h-9 items-center gap-2 rounded-2xl border border-blue-100 bg-slate-50 px-3">
+                <Icon name="search" className="size-4 shrink-0 text-slate-400" />
                 <input
                   value={messageSearch}
                   onChange={(event) => setMessageSearch(event.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                   placeholder="Search messages"
                   aria-label="Search messages"
                 />
@@ -1650,18 +1674,18 @@ export default function FriendsApp() {
                   type="button"
                   onClick={() => selectThread(thread.id)}
                   className={cx(
-                    "flex min-w-64 items-center gap-3 rounded-md p-2.5 text-left transition lg:min-w-0",
-                    thread.id === selectedThreadData.id ? "bg-stone-100" : "hover:bg-stone-50"
+                    "flex min-w-64 items-center gap-3 rounded-2xl p-2.5 text-left transition lg:min-w-0",
+                    thread.id === selectedThreadData.id ? "bg-slate-100" : "hover:bg-slate-50"
                   )}
                 >
-                  <Avatar label={thread.avatar} size="sm" />
+                  <Avatar label={thread.avatar} seed={thread.id} size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-stone-900">{thread.name}</span>
-                    <span className="block truncate text-xs text-stone-500">
+                    <span className="block truncate text-sm font-medium text-slate-900">{thread.name}</span>
+                    <span className="block truncate text-xs text-slate-500">
                       {thread.type} · {lastMessage}
                     </span>
                   </span>
-                  {unread ? <span className="grid size-5 place-items-center rounded-full bg-stone-900 text-[10px] font-medium text-white">{unread}</span> : null}
+                  {unread ? <span className="grid size-5 place-items-center rounded-full bg-blue-600 text-[10px] font-medium text-white">{unread}</span> : null}
                 </button>
                 );
               })}
@@ -1669,11 +1693,11 @@ export default function FriendsApp() {
           </div>
 
           <div className="flex min-h-[560px] min-w-0 flex-col">
-            <header className="flex items-center gap-3 border-b border-stone-200 px-5 py-3">
-              <Avatar label={selectedThreadData.avatar} size="sm" />
+            <header className="flex items-center gap-3 border-b border-blue-100 px-5 py-3">
+              <Avatar label={selectedThreadData.avatar} seed={selectedThreadData.id} size="sm" />
               <div className="min-w-0 flex-1">
-                <strong className="block truncate text-sm font-semibold text-stone-900">{selectedThreadData.name}</strong>
-                <span className="block truncate text-xs text-stone-500">{selectedThreadData.members}</span>
+                <strong className="block truncate text-sm font-semibold text-slate-900">{selectedThreadData.name}</strong>
+                <span className="block truncate text-xs text-slate-500">{selectedThreadData.members}</span>
               </div>
               <div className="flex gap-1.5">
                 <IconButton icon="mic" label="Record voice message" onClick={() => showToast("Voice note recorded")} className="size-9 px-0" />
@@ -1682,7 +1706,7 @@ export default function FriendsApp() {
               </div>
             </header>
 
-            <div className="flex-1 space-y-3 overflow-y-auto bg-stone-50 p-5">
+            <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-5">
               {selectedMessages.map(([person, message], index) => {
                 const fromSelf = person === "Daisy" || person === userProfile.name;
                 return (
@@ -1692,11 +1716,11 @@ export default function FriendsApp() {
                   >
                     <div
                       className={cx(
-                        "max-w-[78%] rounded-lg px-3.5 py-2 text-sm leading-6",
-                        fromSelf ? "bg-stone-900 text-white" : "border border-stone-200 bg-white text-stone-900"
+                        "max-w-[78%] rounded-3xl px-3.5 py-2 text-sm leading-6",
+                        fromSelf ? "bg-blue-600 text-white" : "border border-blue-100 bg-blue-50 text-slate-900"
                       )}
                     >
-                      <strong className={cx("mb-0.5 block text-[11px] font-medium", fromSelf ? "text-white/70" : "text-stone-500")}>{person}</strong>
+                      <strong className={cx("mb-0.5 block text-[11px] font-medium", fromSelf ? "text-white/70" : "text-slate-500")}>{person}</strong>
                       {message}
                     </div>
                   </div>
@@ -1704,11 +1728,11 @@ export default function FriendsApp() {
               })}
             </div>
 
-            <form className="flex items-center gap-2 border-t border-stone-200 p-3" onSubmit={sendMessage}>
+            <form className="flex items-center gap-2 border-t border-blue-100 p-3" onSubmit={sendMessage}>
               <input
                 value={messageDraft}
                 onChange={(event) => setMessageDraft(event.target.value)}
-                className="h-10 min-w-0 flex-1 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-900 outline-none focus:border-stone-900"
+                className="h-10 min-w-0 flex-1 rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm text-slate-900 outline-none focus:border-blue-600"
                 placeholder="Write a message"
                 aria-label="Message"
               />
@@ -1728,7 +1752,7 @@ export default function FriendsApp() {
     return (
       <div className="space-y-8">
         <ViewHeader eyebrow="Discovery" title="Explore">
-          <div className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-md border border-stone-200 bg-white p-0.5">
+          <div className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-2xl border border-blue-100 bg-blue-50 p-0.5">
             {filters.map((filter) => (
               <button
                 key={filter}
@@ -1736,7 +1760,7 @@ export default function FriendsApp() {
                 onClick={() => setExploreFilter(filter)}
                 className={cx(
                   "h-8 shrink-0 rounded px-3 text-sm font-medium transition",
-                  exploreFilter === filter ? "bg-stone-900 text-white" : "text-stone-600 hover:text-stone-900"
+                  exploreFilter === filter ? "bg-blue-600 text-white" : "text-slate-600 hover:text-slate-900"
                 )}
               >
                 {filter}
@@ -1746,14 +1770,14 @@ export default function FriendsApp() {
         </ViewHeader>
 
         <form
-          className="flex h-10 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 md:hidden"
+          className="flex h-10 items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-3 md:hidden"
           onSubmit={(event) => event.preventDefault()}
         >
-          <Icon name="search" className="size-4 shrink-0 text-stone-400" />
+          <Icon name="search" className="size-4 shrink-0 text-slate-400" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="min-w-0 flex-1 text-sm text-stone-900 outline-none placeholder:text-stone-400"
+            className="min-w-0 flex-1 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             placeholder="Search posts, shops, audio"
             aria-label="Search Explore"
           />
@@ -1769,7 +1793,7 @@ export default function FriendsApp() {
                 showToast(`${tile.title} opened`);
               }}
               className={cx(
-                "group relative overflow-hidden rounded-lg border border-stone-200 bg-stone-900 text-left",
+                "group relative overflow-hidden rounded-3xl border border-blue-100 bg-blue-600 text-left",
                 index % 5 === 0 && "sm:col-span-2"
               )}
             >
@@ -1784,8 +1808,8 @@ export default function FriendsApp() {
 
         {filteredExplore.length === 0 ? (
           <Card className="p-10 text-center">
-            <h2 className="text-base font-semibold text-stone-900">No matches</h2>
-            <p className="mt-1 text-sm text-stone-500">Try another search or reset the filter.</p>
+            <h2 className="text-base font-semibold text-slate-900">No matches</h2>
+            <p className="mt-1 text-sm text-slate-500">Try another search or reset the filter.</p>
             <SecondaryButton
               icon="close"
               onClick={() => {
@@ -1806,12 +1830,12 @@ export default function FriendsApp() {
     return (
       <div className="space-y-8">
         <ViewHeader eyebrow="Broadcast" title="Live Studio">
-          <label className="inline-flex h-9 min-w-0 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700">
+          <label className="inline-flex h-9 min-w-0 items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm font-medium text-slate-700">
             <Icon name="edit" className="size-4 shrink-0" />
             <input
               value={liveTitle}
               onChange={(event) => setLiveTitle(event.target.value)}
-              className="min-w-0 bg-transparent text-sm font-normal text-stone-900 outline-none"
+              className="min-w-0 bg-transparent text-sm font-normal text-slate-900 outline-none"
               aria-label="Live title"
             />
           </label>
@@ -1828,13 +1852,13 @@ export default function FriendsApp() {
         </ViewHeader>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="relative overflow-hidden rounded-lg border border-stone-200 bg-stone-900">
+          <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-blue-600">
             <img className="h-[min(72vh,720px)] min-h-[480px] w-full object-cover opacity-90" src="/assets/creator-studio.png" alt="Live studio preview" />
             <div className="absolute left-4 top-4 flex flex-wrap gap-2">
               <Pill tone={isLive ? "danger" : "dark"}>{isLive ? "Live now" : "Preview"}</Pill>
               <Pill tone="dark">2.4K waiting</Pill>
             </div>
-            <div className="absolute bottom-4 left-4 right-20 max-w-xl rounded-md bg-black/35 p-4 text-white backdrop-blur">
+            <div className="absolute bottom-4 left-4 right-20 max-w-xl rounded-2xl bg-black/35 p-4 text-white backdrop-blur">
               <h2 className="text-xl font-semibold tracking-tight">{liveTitle}</h2>
               <p className="mt-1 text-sm text-white/75">Guests, shopping tags, Q&A, and moderation are staged before you go on air.</p>
             </div>
@@ -1850,7 +1874,7 @@ export default function FriendsApp() {
                   }}
                   className={cx(
                     "grid size-10 place-items-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition hover:bg-white/20",
-                    liveReaction === name && "bg-white text-stone-900"
+                    liveReaction === name && "bg-blue-50 text-slate-900"
                   )}
                   aria-label={`${name} reaction`}
                 >
@@ -1861,18 +1885,18 @@ export default function FriendsApp() {
           </div>
 
           <Card as="aside" className="flex min-h-[480px] flex-col">
-            <div className="border-b border-stone-200 px-5 py-4">
-              <h2 className="text-sm font-semibold text-stone-900">Q&A and comments</h2>
-              <p className="mt-0.5 text-xs text-stone-500">Guest queue and live chat.</p>
+            <div className="border-b border-blue-100 px-5 py-4">
+              <h2 className="text-sm font-semibold text-slate-900">Q&A and comments</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Guest queue and live chat.</p>
             </div>
             <div className="flex-1 space-y-2 overflow-y-auto p-5">
               {liveComments.map(([person, comment], index) => (
-                <p key={`${person}-${comment}-${index}`} className="text-sm leading-6 text-stone-700">
-                  <strong className="font-semibold text-stone-900">{person}</strong> {comment}
+                <p key={`${person}-${comment}-${index}`} className="text-sm leading-6 text-slate-700">
+                  <strong className="font-semibold text-slate-900">{person}</strong> {comment}
                 </p>
               ))}
             </div>
-            <div className="border-t border-stone-200 p-3">
+            <div className="border-t border-blue-100 p-3">
               <SecondaryButton icon="users" onClick={() => routeTo("collab")} className="mb-2 w-full">
                 Invite guest
               </SecondaryButton>
@@ -1881,7 +1905,7 @@ export default function FriendsApp() {
                   id="live-comment"
                   value={liveDraft}
                   onChange={(event) => setLiveDraft(event.target.value)}
-                  className="h-10 min-w-0 flex-1 rounded-md border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-900"
+                  className="h-10 min-w-0 flex-1 rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm outline-none focus:border-blue-600"
                   placeholder="Add a comment"
                   aria-label="Live comment"
                 />
@@ -1900,17 +1924,17 @@ export default function FriendsApp() {
     return (
       <div className="space-y-8">
         <Card className="overflow-hidden">
-          <div className="h-32 bg-stone-100" />
+          <div className="h-32 bg-slate-100" />
           <div className="px-6 pb-6">
             <div className="-mt-10 flex flex-col gap-4 sm:flex-row sm:items-end">
               <div className="ring-4 ring-white rounded-full">
-                <Avatar label={userProfile.avatar} imageSrc={userProfile.photo} size="xl" />
+                <Avatar label={userProfile.avatar} imageSrc={userProfile.photo} seed={userProfile.handle} size="xl" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-stone-500">@{userProfile.handle}</p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">{userProfile.name}</h1>
-                <p className="mt-1.5 max-w-2xl text-sm leading-6 text-stone-600">{userProfile.bio}</p>
-                <button type="button" onClick={copyProfileLink} className="mt-1 text-sm font-medium text-stone-900 underline-offset-2 hover:underline">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">@{userProfile.handle}</p>
+                <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{userProfile.name}</h1>
+                <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">{userProfile.bio}</p>
+                <button type="button" onClick={copyProfileLink} className="mt-1 text-sm font-medium text-slate-900 underline-offset-2 hover:underline">
                   {userProfile.link}
                 </button>
               </div>
@@ -1937,27 +1961,27 @@ export default function FriendsApp() {
               </div>
             </div>
 
-            <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-stone-200 pt-5">
+            <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-blue-100 pt-5">
               {Object.entries(profileStats).map(([key, value]) => (
                 <div key={key}>
-                  <dt className="text-xs font-medium uppercase tracking-wider text-stone-500">{key}</dt>
-                  <dd className="mt-1 text-xl font-semibold text-stone-900">{value}</dd>
+                  <dt className="text-xs font-medium uppercase tracking-wider text-slate-500">{key}</dt>
+                  <dd className="mt-1 text-xl font-semibold text-slate-900">{value}</dd>
                 </div>
               ))}
             </dl>
 
             {editingProfile ? (
-              <div className="mt-5 rounded-md border border-stone-200 bg-stone-50 p-4">
+              <div className="mt-5 rounded-2xl border border-blue-100 bg-slate-50 p-4">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
-                    <Avatar label={userProfile.avatar} imageSrc={profileDraft.photo} size="lg" />
+                    <Avatar label={userProfile.avatar} imageSrc={profileDraft.photo} seed={userProfile.handle} size="lg" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-stone-900">Profile picture</p>
-                      <p className="text-xs text-stone-500">Use a square image for the cleanest crop.</p>
+                      <p className="text-sm font-medium text-slate-900">Profile picture</p>
+                      <p className="text-xs text-slate-500">Use a square image for the cleanest crop.</p>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-stone-200 bg-white px-4 text-sm font-medium text-stone-800 transition hover:border-stone-300 hover:bg-stone-50">
+                    <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-2xl border border-blue-100 bg-blue-50 px-4 text-sm font-medium text-slate-800 transition hover:border-blue-200 hover:bg-slate-50">
                       <Icon name="upload" className="size-4 shrink-0" />
                       Change photo
                       <input
@@ -1979,42 +2003,42 @@ export default function FriendsApp() {
                   </div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
-                  <label className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                  <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
                     Name
                     <input
                       value={profileDraft.name}
                       onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))}
-                      className="mt-1 h-10 w-full rounded-md border border-stone-200 bg-white px-3 text-sm font-normal normal-case tracking-normal text-stone-800 outline-none focus:border-stone-900"
+                      className="mt-1 h-10 w-full rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm font-normal normal-case tracking-normal text-slate-800 outline-none focus:border-blue-600"
                     />
                   </label>
-                  <label className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                  <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
                     Username
-                    <div className="mt-1 flex h-10 rounded-md border border-stone-200 bg-white focus-within:border-stone-900">
-                      <span className="grid h-full place-items-center px-3 text-sm font-normal normal-case tracking-normal text-stone-400">@</span>
+                    <div className="mt-1 flex h-10 rounded-2xl border border-blue-100 bg-blue-50 focus-within:border-blue-600">
+                      <span className="grid h-full place-items-center px-3 text-sm font-normal normal-case tracking-normal text-slate-400">@</span>
                       <input
                         value={profileDraft.handle}
                         onChange={(event) => setProfileDraft((current) => ({ ...current, handle: event.target.value }))}
-                        className="min-w-0 flex-1 bg-transparent pr-3 text-sm font-normal normal-case tracking-normal text-stone-800 outline-none"
+                        className="min-w-0 flex-1 bg-transparent pr-3 text-sm font-normal normal-case tracking-normal text-slate-800 outline-none"
                         aria-label="Username"
                       />
                     </div>
                   </label>
-                  <label className="text-xs font-medium uppercase tracking-wider text-stone-500">
+                  <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
                     Link
                     <input
                       value={profileDraft.link}
                       onChange={(event) => setProfileDraft((current) => ({ ...current, link: event.target.value }))}
-                      className="mt-1 h-10 w-full rounded-md border border-stone-200 bg-white px-3 text-sm font-normal normal-case tracking-normal text-stone-800 outline-none focus:border-stone-900"
+                      className="mt-1 h-10 w-full rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm font-normal normal-case tracking-normal text-slate-800 outline-none focus:border-blue-600"
                     />
                   </label>
                 </div>
-                <label className="mt-3 block text-xs font-medium uppercase tracking-wider text-stone-500">
+                <label className="mt-3 block text-xs font-medium uppercase tracking-wider text-slate-500">
                   Bio
                   <textarea
                     value={profileDraft.bio}
                     onChange={(event) => setProfileDraft((current) => ({ ...current, bio: event.target.value }))}
                     rows={3}
-                    className="mt-1 w-full resize-none rounded-md border border-stone-200 bg-white px-3 py-2 text-sm font-normal normal-case leading-6 tracking-normal text-stone-800 outline-none focus:border-stone-900"
+                    className="mt-1 w-full resize-none rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-normal normal-case leading-6 tracking-normal text-slate-800 outline-none focus:border-blue-600"
                   />
                 </label>
                 <div className="mt-3 flex justify-end">
@@ -2028,7 +2052,7 @@ export default function FriendsApp() {
         </Card>
 
         <div>
-          <p className="mb-3 text-xs font-medium uppercase tracking-wider text-stone-500">Highlights</p>
+          <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">Highlights</p>
           <div className="no-scrollbar flex gap-3 overflow-x-auto">
             {stories.map((story) => (
               <button
@@ -2038,12 +2062,12 @@ export default function FriendsApp() {
                   setSelectedStory(story.id);
                   routeTo("stories");
                 }}
-                className="flex min-w-44 items-center gap-3 rounded-lg border border-stone-200 bg-white p-3 text-left transition hover:bg-stone-50"
+                className="flex min-w-44 items-center gap-3 rounded-3xl border border-blue-100 bg-blue-50 p-3 text-left transition hover:bg-slate-50"
               >
-                <Avatar label={story.avatar} size="sm" />
+                <Avatar label={story.avatar} seed={story.user} size="sm" />
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-stone-900">{story.highlight}</span>
-                  <span className="block truncate text-xs text-stone-500">{story.user}</span>
+                  <span className="block truncate text-sm font-medium text-slate-900">{story.highlight}</span>
+                  <span className="block truncate text-xs text-slate-500">{story.user}</span>
                 </span>
               </button>
             ))}
@@ -2051,14 +2075,14 @@ export default function FriendsApp() {
         </div>
 
         <div>
-          <p className="mb-3 text-xs font-medium uppercase tracking-wider text-stone-500">Posts</p>
+          <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">Posts</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {allPosts.flatMap((post) => post.media.map((item) => ({ ...item, postId: post.id }))).slice(0, 6).map((item, index) => (
               <button
                 key={`${item.postId}-${index}`}
                 type="button"
                 onClick={() => routeTo("feed")}
-                className="overflow-hidden rounded-lg border border-stone-200 bg-white transition hover:border-stone-300"
+                className="overflow-hidden rounded-3xl border border-blue-100 bg-blue-50 transition hover:border-blue-200"
               >
                 <MediaFrame item={item} />
               </button>
@@ -2090,8 +2114,8 @@ export default function FriendsApp() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {metrics.map(([label, value, change]) => (
             <Card as="article" key={label} className="p-5">
-              <span className="text-xs font-medium uppercase tracking-wider text-stone-500">{label}</span>
-              <strong className="mt-2 block text-2xl font-semibold tracking-tight text-stone-900">{value}</strong>
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</span>
+              <strong className="mt-2 block text-2xl font-semibold tracking-tight text-slate-900">{value}</strong>
               <small className="font-medium text-emerald-700">{change}</small>
             </Card>
           ))}
@@ -2101,17 +2125,17 @@ export default function FriendsApp() {
           <Card className="p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold tracking-tight text-stone-900">Publishing queue</h2>
-                <p className="mt-1 text-sm text-stone-500">Scheduled posts and saved drafts from the composer.</p>
+                <h2 className="text-base font-semibold tracking-tight text-slate-900">Publishing queue</h2>
+                <p className="mt-1 text-sm text-slate-500">Scheduled posts and saved drafts from the composer.</p>
               </div>
               <Pill tone={scheduledPosts.length ? "info" : "neutral"}>{scheduledPosts.length} scheduled</Pill>
             </div>
             <div className="mt-4 space-y-3">
               {[...scheduledPosts, ...savedDrafts].slice(0, 5).map((item) => (
-                <div key={item.id} className="flex flex-col gap-3 rounded-md border border-stone-200 p-3 sm:flex-row sm:items-center">
+                <div key={item.id} className="flex flex-col gap-3 rounded-2xl border border-blue-100 p-3 sm:flex-row sm:items-center">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-stone-900">{item.caption}</p>
-                    <p className="text-xs text-stone-500">
+                    <p className="truncate text-sm font-medium text-slate-900">{item.caption}</p>
+                    <p className="text-xs text-slate-500">
                       {item.mode} · {item.asset} · {item.scheduledFor || "Draft"}
                     </p>
                   </div>
@@ -2133,14 +2157,14 @@ export default function FriendsApp() {
                 </div>
               ))}
               {scheduledPosts.length === 0 && savedDrafts.length === 0 ? (
-                <p className="rounded-md bg-stone-50 p-4 text-sm leading-6 text-stone-600">Use the feed composer to save drafts or schedule a post; they will appear here.</p>
+                <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">Use the feed composer to save drafts or schedule a post; they will appear here.</p>
               ) : null}
             </div>
           </Card>
 
           <Card className="p-5">
-            <h2 className="text-base font-semibold tracking-tight text-stone-900">{activeCreatorTool}</h2>
-            <p className="mt-2 text-sm leading-6 text-stone-600">
+            <h2 className="text-base font-semibold tracking-tight text-slate-900">{activeCreatorTool}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
               {activeCreatorTool === "Scheduling"
                 ? "Plan the next publish window, review drafts, and keep collaborators aligned before posts go live."
                 : activeCreatorTool === "Promotions"
@@ -2150,13 +2174,13 @@ export default function FriendsApp() {
                     : "Track reach, engagement, saves, sales taps, and audience movement across surfaces."}
             </p>
             <dl className="mt-4 grid grid-cols-2 gap-3">
-              <div className="rounded-md bg-stone-50 p-3">
-                <dt className="text-xs font-medium uppercase tracking-wider text-stone-500">Drafts</dt>
-                <dd className="mt-1 text-xl font-semibold text-stone-900">{savedDrafts.length}</dd>
+              <div className="rounded-2xl bg-slate-50 p-3">
+                <dt className="text-xs font-medium uppercase tracking-wider text-slate-500">Drafts</dt>
+                <dd className="mt-1 text-xl font-semibold text-slate-900">{savedDrafts.length}</dd>
               </div>
-              <div className="rounded-md bg-stone-50 p-3">
-                <dt className="text-xs font-medium uppercase tracking-wider text-stone-500">Queue</dt>
-                <dd className="mt-1 text-xl font-semibold text-stone-900">{scheduledPosts.length}</dd>
+              <div className="rounded-2xl bg-slate-50 p-3">
+                <dt className="text-xs font-medium uppercase tracking-wider text-slate-500">Queue</dt>
+                <dd className="mt-1 text-xl font-semibold text-slate-900">{scheduledPosts.length}</dd>
               </div>
             </dl>
           </Card>
@@ -2169,16 +2193,16 @@ export default function FriendsApp() {
               key={title}
               className={cx(
                 "p-5 transition",
-                activeCreatorTool === title ? "border-stone-900" : ""
+                activeCreatorTool === title ? "border-blue-600" : ""
               )}
             >
               <div className="flex items-start gap-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-stone-100 text-stone-700">
+                <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-slate-100 text-slate-700">
                   <Icon name={icon} className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-semibold tracking-tight text-stone-900">{title}</h2>
-                  <p className="mt-1 text-sm leading-6 text-stone-600">{copy}</p>
+                  <h2 className="text-base font-semibold tracking-tight text-slate-900">{title}</h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">{copy}</p>
                 </div>
               </div>
               <SecondaryButton
@@ -2228,12 +2252,12 @@ export default function FriendsApp() {
                     </div>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h2 className="truncate text-base font-semibold tracking-tight text-stone-900">{product.name}</h2>
-                        <p className="text-xs text-stone-500">{product.merchant}</p>
+                        <h2 className="truncate text-base font-semibold tracking-tight text-slate-900">{product.name}</h2>
+                        <p className="text-xs text-slate-500">{product.merchant}</p>
                       </div>
-                      <strong className="text-base font-semibold text-stone-900">{product.price}</strong>
+                      <strong className="text-base font-semibold text-slate-900">{product.price}</strong>
                     </div>
-                    <p className="text-xs text-stone-500">{product.stock === 999 ? "Digital download" : `${product.stock} available`}</p>
+                    <p className="text-xs text-slate-500">{product.stock === 999 ? "Digital download" : `${product.stock} available`}</p>
                     <div className="flex flex-wrap gap-2 pt-1">
                       <PrimaryButton icon="cart" onClick={() => addToCart(product)}>
                         Add to cart
@@ -2253,33 +2277,33 @@ export default function FriendsApp() {
 
           <Card as="aside" className="h-fit p-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold tracking-tight text-stone-900">Cart</h2>
+              <h2 className="text-base font-semibold tracking-tight text-slate-900">Cart</h2>
               <Pill tone={cartCount ? "success" : "neutral"}>{cartCount} items</Pill>
             </div>
             <div className="mt-4 space-y-3">
               {cartItems.length ? (
                 cartItems.map(({ product, quantity }) => (
-                  <div key={product.id} className="flex gap-3 rounded-md border border-stone-200 p-3">
+                  <div key={product.id} className="flex gap-3 rounded-2xl border border-blue-100 p-3">
                     <img src={product.image} alt="" className="size-14 rounded object-cover" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-stone-900">{product.name}</p>
-                      <p className="text-xs text-stone-500">{product.price} · {product.merchant}</p>
+                      <p className="truncate text-sm font-medium text-slate-900">{product.name}</p>
+                      <p className="text-xs text-slate-500">{product.price} · {product.merchant}</p>
                       <div className="mt-2 flex items-center gap-1.5">
                         <IconButton icon="minus" label={`Remove one ${product.name}`} onClick={() => updateCart(product.id, quantity - 1)} className="size-8 px-0" />
-                        <span className="grid h-8 min-w-8 place-items-center rounded-md border border-stone-200 px-2 text-xs font-medium">{quantity}</span>
+                        <span className="grid h-8 min-w-8 place-items-center rounded-2xl border border-blue-100 px-2 text-xs font-medium">{quantity}</span>
                         <IconButton icon="plus" label={`Add one ${product.name}`} onClick={() => updateCart(product.id, quantity + 1)} className="size-8 px-0" />
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="rounded-md bg-stone-50 p-4 text-sm leading-6 text-stone-600">Add products to see quantities, subtotal, and checkout state here.</p>
+                <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">Add products to see quantities, subtotal, and checkout state here.</p>
               )}
             </div>
-            <div className="mt-5 border-t border-stone-200 pt-4">
+            <div className="mt-5 border-t border-blue-100 pt-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-stone-500">Subtotal</span>
-                <strong className="text-stone-900">${cartSubtotal.toFixed(2)}</strong>
+                <span className="text-slate-500">Subtotal</span>
+                <strong className="text-slate-900">${cartSubtotal.toFixed(2)}</strong>
               </div>
               <PrimaryButton
                 icon="cart"
@@ -2311,13 +2335,13 @@ export default function FriendsApp() {
           {collabItems.map(([title, copy]) => (
             <Card as="article" key={title} className="p-5">
               <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-stone-100 text-stone-700">
+                <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-slate-100 text-slate-700">
                   <Icon name="link" className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-semibold tracking-tight text-stone-900">{title}</h2>
-                  <p className="mt-1 text-sm leading-6 text-stone-600">{copy}</p>
-                  <label className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-stone-600">
+                  <h2 className="text-base font-semibold tracking-tight text-slate-900">{title}</h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">{copy}</p>
+                  <label className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-slate-600">
                     <input
                       type="checkbox"
                       checked={collabApprovals[title] || false}
@@ -2325,7 +2349,7 @@ export default function FriendsApp() {
                         setCollabApprovals((current) => ({ ...current, [title]: event.target.checked }));
                         showToast(event.target.checked ? `${title} approved` : `${title} approval removed`);
                       }}
-                      className="size-3.5 accent-stone-900"
+                      className="size-3.5 accent-blue-600"
                     />
                     Partner approval recorded
                   </label>
@@ -2373,7 +2397,7 @@ export default function FriendsApp() {
     return (
       <div className="space-y-8">
         <ViewHeader eyebrow="Privacy" title="Safety controls">
-          <label className="inline-flex h-9 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700">
+          <label className="inline-flex h-9 items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm font-medium text-slate-700">
             <input
               type="checkbox"
               checked={privateAccount}
@@ -2382,7 +2406,7 @@ export default function FriendsApp() {
                 setSafetyPrefs((current) => ({ ...current, "Private account": event.target.checked }));
                 showToast(event.target.checked ? "Private account enabled" : "Private account disabled");
               }}
-              className="size-3.5 accent-stone-900"
+              className="size-3.5 accent-blue-600"
             />
             Private account
           </label>
@@ -2394,8 +2418,8 @@ export default function FriendsApp() {
         <Card className="p-5">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div>
-              <h2 className="text-base font-semibold tracking-tight text-stone-900">Hidden words</h2>
-              <p className="mt-1 text-sm leading-6 text-stone-600">Terms here are treated as filtered content in comments and messages.</p>
+              <h2 className="text-base font-semibold tracking-tight text-slate-900">Hidden words</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">Terms here are treated as filtered content in comments and messages.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {hiddenWords.map((term) => (
                   <button
@@ -2405,7 +2429,7 @@ export default function FriendsApp() {
                       setHiddenWords((current) => current.filter((item) => item !== term));
                       showToast(`${term} removed`);
                     }}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-md bg-stone-100 px-2.5 text-xs font-medium text-stone-700 transition hover:bg-stone-200"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-2xl bg-blue-100 px-2.5 text-xs font-medium text-slate-700 transition hover:bg-blue-200"
                   >
                     {term}
                     <Icon name="close" className="size-3" />
@@ -2414,12 +2438,12 @@ export default function FriendsApp() {
               </div>
             </div>
             <form className="flex items-end gap-2" onSubmit={addHiddenWord}>
-              <label className="min-w-0 flex-1 text-xs font-medium uppercase tracking-wider text-stone-500">
+              <label className="min-w-0 flex-1 text-xs font-medium uppercase tracking-wider text-slate-500">
                 New term
                 <input
                   value={hiddenWordDraft}
                   onChange={(event) => setHiddenWordDraft(event.target.value)}
-                  className="mt-1 h-10 w-full rounded-md border border-stone-200 bg-white px-3 text-sm font-normal normal-case tracking-normal text-stone-800 outline-none focus:border-stone-900"
+                  className="mt-1 h-10 w-full rounded-2xl border border-blue-100 bg-blue-50 px-3 text-sm font-normal normal-case tracking-normal text-slate-800 outline-none focus:border-blue-600"
                   placeholder="Add phrase"
                 />
               </label>
@@ -2436,12 +2460,12 @@ export default function FriendsApp() {
             return (
               <Card as="article" key={title} className="flex flex-col p-5">
                 <div className="flex items-start gap-3">
-                  <span className={cx("grid size-10 shrink-0 place-items-center rounded-md", enabled ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-700")}>
+                  <span className={cx("grid size-10 shrink-0 place-items-center rounded-2xl", enabled ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700")}>
                     <Icon name={icon} className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-base font-semibold tracking-tight text-stone-900">{title}</h2>
-                    <p className="mt-1 text-sm leading-6 text-stone-600">{copy}</p>
+                    <h2 className="text-base font-semibold tracking-tight text-slate-900">{title}</h2>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">{copy}</p>
                   </div>
                 </div>
                 <button
@@ -2453,8 +2477,8 @@ export default function FriendsApp() {
                     showToast(`${title} ${next ? "enabled" : "disabled"}`);
                   }}
                   className={cx(
-                    "mt-5 inline-flex h-9 w-full items-center justify-center rounded-md text-sm font-medium transition",
-                    enabled ? "bg-stone-900 text-white hover:bg-stone-800" : "border border-stone-200 bg-white text-stone-700 hover:bg-stone-50"
+                    "mt-5 inline-flex h-9 w-full items-center justify-center rounded-2xl text-sm font-medium transition",
+                    enabled ? "bg-blue-600 text-white hover:bg-blue-700" : "border border-blue-100 bg-blue-50 text-slate-700 hover:bg-slate-50"
                   )}
                 >
                   {enabled ? "Enabled" : "Enable"}

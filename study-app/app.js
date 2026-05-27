@@ -459,11 +459,22 @@ Views.notes = (root)=>{
 
 // Planner (calendar + exams)
 let calCursor = new Date();
+const CAL_PALETTE = [
+  {name:'Pink',   bg:'#ffb3d1', fg:'#3a0f25'},
+  {name:'Peach',  bg:'#ffd6a8', fg:'#5a3110'},
+  {name:'Lemon',  bg:'#fff3a8', fg:'#5a4a10'},
+  {name:'Mint',   bg:'#b8eecb', fg:'#0f4a25'},
+  {name:'Sky',    bg:'#b8dcff', fg:'#0f3a5a'},
+  {name:'Lilac',  bg:'#d8c5ff', fg:'#3a205a'},
+  {name:'Coral',  bg:'#ffb0a8', fg:'#5a1f1a'},
+  {name:'Gray',   bg:'#e0e0e8', fg:'#222'},
+];
+let calColorIdx = 0;
 Views.planner = (root)=>{
   root.innerHTML = `
     <h1>Study Planner</h1>
-    <p class="sub">Add events, deadlines, exams. Click a day to add.</p>
-    <div class="row" style="margin-bottom:6px">
+    <p class="sub">Click a day to add. Click an event to change its color or delete it.</p>
+    <div class="row" style="margin-bottom:10px">
       <button class="btn ghost small" id="prevM">←</button>
       <strong id="monthLabel"></strong>
       <button class="btn ghost small" id="nextM">→</button>
@@ -473,13 +484,20 @@ Views.planner = (root)=>{
     <div class="cal" id="cal"></div>
     <h2>Upcoming exams</h2>
     <div id="examList"></div>`;
+
   $('#prevM').onclick=()=>{ calCursor.setMonth(calCursor.getMonth()-1); drawCal(); };
   $('#nextM').onclick=()=>{ calCursor.setMonth(calCursor.getMonth()+1); drawCal(); };
   $('#addExam').onclick=()=>{
     const title = prompt('Exam name?'); if(!title) return;
     const date = prompt('Date (YYYY-MM-DD)?', todayISO()); if(!date) return;
-    State.exams.push({id:uid(),title,date}); saveAll(); drawExams();
+    State.exams.push({id:uid(), title, date, colorIdx: calColorIdx}); saveAll(); drawExams(); drawCal();
   };
+
+  function colorOf(e){
+    const c = CAL_PALETTE[e.colorIdx] || (e.exam ? {bg:'#ffb0a8', fg:'#5a1f1a'} : CAL_PALETTE[0]);
+    return c;
+  }
+
   function drawCal(){
     const y=calCursor.getFullYear(), m=calCursor.getMonth();
     $('#monthLabel').textContent = calCursor.toLocaleDateString(undefined,{month:'long',year:'numeric'});
@@ -489,24 +507,80 @@ Views.planner = (root)=>{
     for(let i=0;i<first;i++) html+=`<div></div>`;
     for(let d=1; d<=days; d++){
       const iso = new Date(y,m,d).toISOString().slice(0,10);
-      const evs = [...State.events.filter(e=>e.date===iso), ...State.exams.filter(e=>e.date===iso).map(e=>({...e,exam:true}))];
+      const evs = [
+        ...State.events.filter(e=>e.date===iso).map(e=>({...e,kind:'event'})),
+        ...State.exams.filter(e=>e.date===iso).map(e=>({...e,kind:'exam',exam:true}))
+      ];
       const isToday = iso===todayISO();
-      html += `<div class="d ${isToday?'today':''}" data-iso="${iso}"><div class="dn">${d}</div>${evs.map(e=>`<div class="ev" style="${e.exam?'background:#b3411b':''}">${escapeHtml(e.title)}</div>`).join('')}</div>`;
+      const evHtml = evs.map(e=>{
+        const c = colorOf(e);
+        return `<div class="ev" data-eid="${e.id}" data-kind="${e.kind}" style="background:${c.bg};color:${c.fg}">${escapeHtml(e.title)}</div>`;
+      }).join('');
+      html += `<div class="d ${isToday?'today':''}" data-iso="${iso}"><div class="dn">${d}</div>${evHtml}</div>`;
     }
     $('#cal').innerHTML = html;
-    $$('.d').forEach(el=>el.onclick=()=>{
+    $$('.d').forEach(el=>el.onclick=(ev)=>{
+      const evNode = ev.target.closest('.ev');
+      if (evNode){
+        ev.stopPropagation();
+        const id = evNode.dataset.eid, kind = evNode.dataset.kind;
+        openEventEditor(id, kind);
+        return;
+      }
       const t = prompt('Event title? (leave blank to cancel)'); if(!t) return;
-      State.events.push({id:uid(), title:t, date:el.dataset.iso}); saveAll(); drawCal();
+      State.events.push({id:uid(), title:t, date:el.dataset.iso, colorIdx: calColorIdx}); saveAll(); drawCal();
     });
   }
+
+  function openEventEditor(id, kind){
+    const arr = kind==='exam' ? State.exams : State.events;
+    const item = arr.find(x=>x.id===id); if(!item) return;
+    closeEventEditor();
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal">
+        <h3 style="margin:0 0 4px">${escapeHtml(item.title)}</h3>
+        <p class="sub" style="margin:0 0 12px">${kind==='exam'?'Exam':'Event'} · ${item.date}</p>
+        <label>Title</label>
+        <input id="meTitle" value="${escapeAttr(item.title)}"/>
+        <label style="margin-top:10px">Color</label>
+        <div class="row" id="meColors" style="gap:8px"></div>
+        <div class="row" style="margin-top:14px">
+          <button class="btn danger" id="meDel">Delete</button>
+          <div class="spacer"></div>
+          <button class="btn ghost" id="meCancel">Close</button>
+          <button class="btn" id="meSave">Save</button>
+        </div>
+      </div>`;
+    document.body.appendChild(backdrop);
+    const drawSw = ()=>{
+      $('#meColors').innerHTML = CAL_PALETTE.map((c,i)=>`<button class="swatch ${i===(item.colorIdx??0)?'on':''}" data-ci="${i}" style="background:${c.bg}" title="${c.name}"></button>`).join('');
+      $$('#meColors .swatch').forEach(b=>b.onclick=()=>{ item.colorIdx = +b.dataset.ci; saveAll(); drawSw(); drawCal(); drawExams(); });
+    };
+    drawSw();
+    $('#meSave').onclick = ()=>{ item.title = $('#meTitle').value || item.title; saveAll(); closeEventEditor(); drawCal(); drawExams(); };
+    $('#meCancel').onclick = closeEventEditor;
+    $('#meDel').onclick = ()=>{
+      if(!confirm('Delete "'+item.title+'"?')) return;
+      if (kind==='exam') State.exams = State.exams.filter(x=>x.id!==id);
+      else State.events = State.events.filter(x=>x.id!==id);
+      saveAll(); closeEventEditor(); drawCal(); drawExams();
+    };
+    backdrop.addEventListener('click', e=>{ if(e.target===backdrop) closeEventEditor(); });
+  }
+  function closeEventEditor(){ document.querySelectorAll('.modal-backdrop').forEach(n=>n.remove()); }
+
   function drawExams(){
     const list = State.exams.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
-    $('#examList').innerHTML = list.length? `<table><tr><th>Exam</th><th>Date</th><th>Days left</th><th></th></tr>${list.map(e=>{
+    $('#examList').innerHTML = list.length? `<table><tr><th>Exam</th><th>Date</th><th>Days left</th><th>Color</th><th></th></tr>${list.map(e=>{
       const d = Math.ceil((new Date(e.date)-Date.now())/86400000);
-      return `<tr><td>${escapeHtml(e.title)}</td><td>${e.date}</td><td>${d}</td><td><button class="btn small danger" data-rmx="${e.id}">×</button></td></tr>`;
+      const c = colorOf({...e,exam:true});
+      return `<tr><td>${escapeHtml(e.title)}</td><td>${e.date}</td><td>${d}</td><td><span class="swatch sm" style="background:${c.bg}"></span></td><td><button class="btn small danger" data-rmx="${e.id}">×</button></td></tr>`;
     }).join('')}</table>` : `<div class="empty">No exams scheduled.</div>`;
     $$('[data-rmx]').forEach(b=>b.onclick=()=>{ State.exams = State.exams.filter(e=>e.id!==b.dataset.rmx); saveAll(); drawExams(); drawCal(); });
   }
+
   drawCal(); drawExams();
 };
 

@@ -32,6 +32,7 @@ function loadState(){
   State.progress = Store.load('progress', {});
   State.streak = Store.load('streak', { last:null, count:0 });
   State.pomo = Store.load('pomo', { focus:25, short:5, long:15, completedToday:0 });
+  expireStreakIfStale();
 }
 function saveAll(){
   for (const k of ['sets','notes','events','resources','exams','progress','streak','pomo']){
@@ -53,6 +54,15 @@ function sampleSets(){
 }
 
 // --- Streak ---
+function expireStreakIfStale(){
+  // If the last study day was neither today nor yesterday, the streak is broken.
+  const t = todayISO();
+  const y = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  if (State.streak.last && State.streak.last !== t && State.streak.last !== y){
+    State.streak.count = 0;
+    saveAll();
+  }
+}
 function bumpStreak(){
   const t = todayISO();
   if (State.streak.last === t) return;
@@ -65,7 +75,7 @@ function renderStreak(){ $('#streakCount').textContent = State.streak.count; }
 
 // --- Routing ---
 const Views = {};
-const STUDY_VIEWS = ['sets','flashcards','learn','quiz','quizbuilder','notes'];
+const STUDY_VIEWS = ['sets','flashcards','learn','quiz','quizbuilder','notes','resources'];
 function go(view){
   $$('.nav').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   const grp = document.querySelector('.nav-group[data-group="studysets"]');
@@ -95,27 +105,66 @@ function toast(msg){
 // Account
 Views.account = (root)=>{
   const u = Store.currentUser;
+  const users = Store.users();
+  const otherUsers = Object.keys(users).filter(n=>n!==u);
   root.innerHTML = `
     <h1>Account</h1>
     <p class="sub">Local accounts — data lives in your browser.</p>
     <div class="card" style="max-width:480px">
       <h3>${u? 'Signed in as '+u : 'Sign in / Sign up'}</h3>
       <label>Username</label><input id="acctUser" value="${u||''}" />
-      <label>Display name</label><input id="acctName" value="${(Store.users()[u]?.name)||''}" />
+      <label>Display name</label><input id="acctName" value="${(users[u]?.name)||''}" />
       <div class="row" style="margin-top:12px">
-        <button class="btn" id="acctSave">${u?'Switch / Save':'Sign in'}</button>
+        <button class="btn" id="acctSave">${u?'Save changes':'Sign in'}</button>
         ${u?'<button class="btn ghost" id="acctOut">Sign out</button>':''}
       </div>
+    </div>
+
+    <h2>Switch account</h2>
+    <div class="card" style="max-width:480px">
+      ${otherUsers.length? `
+        <div id="acctList">${otherUsers.map(n=>`
+          <div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)">
+            <div>
+              <strong>@${escapeHtml(n)}</strong>
+              <div class="sub" style="margin:2px 0 0;padding:2px 10px">${escapeHtml(users[n].name||n)}</div>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn small" data-switch="${escapeAttr(n)}">Switch</button>
+            <button class="btn small danger" data-rm="${escapeAttr(n)}">Delete</button>
+          </div>`).join('')}
+        </div>` : `<div class="empty" style="margin:0">No other accounts on this device yet.</div>`}
+      <div class="row" style="margin-top:12px">
+        <button class="btn ghost" id="acctNew">+ Add new account</button>
+      </div>
     </div>`;
+
   $('#acctSave').onclick = ()=>{
     const name = $('#acctUser').value.trim();
     if(!name) return toast('Enter a username');
-    const users = Store.users();
-    users[name] = { name: $('#acctName').value || name, created: users[name]?.created || Date.now() };
-    Store.saveUsers(users); Store.currentUser = name;
-    loadState(); refreshUserLabel(); toast('Signed in as '+name); go('dashboard');
+    const users2 = Store.users();
+    users2[name] = { name: $('#acctName').value || name, created: users2[name]?.created || Date.now() };
+    Store.saveUsers(users2);
+    if (Store.currentUser !== name){ Store.currentUser = name; loadState(); }
+    refreshUserLabel(); toast('Saved'); go('dashboard');
   };
   if (u) $('#acctOut').onclick = ()=>{ Store.currentUser=''; loadState(); refreshUserLabel(); go('account'); };
+
+  $$('[data-switch]').forEach(b=>b.onclick=()=>{
+    Store.currentUser = b.dataset.switch;
+    loadState(); refreshUserLabel(); toast('Switched to @'+b.dataset.switch); go('dashboard');
+  });
+  $$('[data-rm]').forEach(b=>b.onclick=()=>{
+    const n = b.dataset.rm;
+    if(!confirm(`Delete account @${n} and all its data on this device?`)) return;
+    const users2 = Store.users(); delete users2[n]; Store.saveUsers(users2);
+    Object.keys(localStorage).filter(k=>k.startsWith(`sd:${n}:`)).forEach(k=>localStorage.removeItem(k));
+    toast('Deleted @'+n); go('account');
+  });
+  $('#acctNew').onclick = ()=>{
+    Store.currentUser = ''; loadState(); refreshUserLabel(); go('account');
+    setTimeout(()=>{ $('#acctUser')?.focus(); }, 0);
+  };
 };
 function refreshUserLabel(){
   $('#userLabel').textContent = Store.currentUser ? '@'+Store.currentUser : 'Not signed in';
@@ -124,15 +173,25 @@ function refreshUserLabel(){
 // Dashboard
 Views.dashboard = (root)=>{
   const totalTerms = State.sets.reduce((s,x)=>s+x.terms.length,0);
-  const mastered = Object.values(State.progress).filter(p=>p.correct-p.wrong>=2).length;
   const nextExam = State.exams.slice().sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
   const daysTo = nextExam? Math.ceil((new Date(nextExam.date)-Date.now())/86400000):null;
+
+  const setStats = State.sets.map(s=>{
+    const stats = s.terms.map(t=>State.progress[t.id]||{correct:0,wrong:0});
+    const mastered = stats.filter(p=>p.correct-p.wrong>=2).length;
+    const shaky = stats.filter(p=>p.correct>0 && p.correct-p.wrong<2 && p.correct-p.wrong>=0).length;
+    const weak = stats.filter(p=>p.wrong>p.correct).length;
+    return {s,mastered,shaky,weak,total:s.terms.length};
+  });
+  const totMastered = setStats.reduce((a,b)=>a+b.mastered,0);
+  const totWeak = setStats.reduce((a,b)=>a+b.weak,0);
+
   root.innerHTML = `
     <h1>Welcome${Store.currentUser? ', '+Store.currentUser:''} 👋</h1>
     <p class="sub">Your study at a glance.</p>
     <div class="grid cards-4">
       <div class="card"><h3>Study sets</h3><div class="kpi">${State.sets.length}</div><p>${totalTerms} terms total</p></div>
-      <div class="card"><h3>Mastered</h3><div class="kpi mastered">${mastered}</div><p>terms answered confidently</p></div>
+      <div class="card"><h3>Mastered</h3><div class="kpi mastered">${totMastered}</div><p>terms answered confidently</p></div>
       <div class="card"><h3>Streak</h3><div class="kpi">🔥 ${State.streak.count}</div><p>keep it going daily</p></div>
       <div class="card"><h3>Pomodoros today</h3><div class="kpi">${State.pomo.completedToday||0}</div><p>focus blocks done</p></div>
     </div>
@@ -142,6 +201,22 @@ Views.dashboard = (root)=>{
         <div class="row"><div><div class="days">${daysTo} days</div><div>${nextExam.title} — ${nextExam.date}</div></div>
         <div class="spacer"></div><button class="btn ghost" data-view="planner">Plan study →</button></div>
       </div>` : `<div class="empty">No exams yet. Add one in the Planner.</div>`}
+
+    <h2>Progress</h2>
+    <div class="grid cards-3" style="margin-bottom:14px">
+      <div class="card"><h3>Mastered terms</h3><div class="kpi mastered">${totMastered}</div></div>
+      <div class="card"><h3>Needs review</h3><div class="kpi weak">${totWeak}</div></div>
+      <div class="card"><h3>Total terms</h3><div class="kpi">${setStats.reduce((a,b)=>a+b.total,0)}</div></div>
+    </div>
+    ${setStats.length? setStats.map(({s,mastered,shaky,weak,total})=>{
+      const pct = total? Math.round(mastered/total*100):0;
+      return `<div class="card" style="margin-bottom:10px">
+        <div class="row"><strong>${escapeHtml(s.title)}</strong><div class="spacer"></div><span class="tag">${pct}% mastered</span></div>
+        <div class="bar-row"><div class="bar-label mastered">Mastered (${mastered})</div><div class="bar"><div style="width:${total?mastered/total*100:0}%"></div></div></div>
+        <div class="bar-row"><div class="bar-label shaky">Familiar (${shaky})</div><div class="bar"><div style="width:${total?shaky/total*100:0}%;background:linear-gradient(90deg,#f0b429,#ff8a3c)"></div></div></div>
+        <div class="bar-row"><div class="bar-label weak">Weak (${weak})</div><div class="bar"><div style="width:${total?weak/total*100:0}%;background:linear-gradient(90deg,#ff6a6a,#ff3a8c)"></div></div></div>
+      </div>`;
+    }).join('') : `<div class="empty">No data yet — study a set first.</div>`}
 
     <h2>Jump back in</h2>
     <div class="grid cards-3">
@@ -162,6 +237,8 @@ Views.dashboard = (root)=>{
   });
   root.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>go(b.dataset.view));
 };
+// keep analytics alias for legacy links
+Views.analytics = (root)=>Views.dashboard(root);
 
 // Study Sets
 let selectedSetId = null;
@@ -179,14 +256,16 @@ Views.sets = (root)=>{
     const q = ($('#setSearch').value||'').toLowerCase();
     $('#setList').innerHTML = State.sets
       .filter(s=>s.title.toLowerCase().includes(q) || (s.subject||'').toLowerCase().includes(q))
-      .map(s=>`<div class="card">
+      .map(s=>{
+        const rCount = State.resources.filter(r=>r.setId===s.id).length;
+        return `<div class="card">
         <h3>${escapeHtml(s.title)}</h3>
-        <p>${s.terms.length} terms · <span class="tag">${escapeHtml(s.subject||'General')}</span> · <span class="tag">${s.visibility||'private'}</span></p>
+        <p>${s.terms.length} terms · ${rCount} resource${rCount===1?'':'s'} · <span class="tag">${escapeHtml(s.subject||'General')}</span> · <span class="tag">${s.visibility||'private'}</span></p>
         <div class="row" style="margin-top:10px">
           <button class="btn small" data-edit="${s.id}">Edit</button>
           <button class="btn small ghost" data-study="${s.id}">Flashcards</button>
           <button class="btn small danger" data-del="${s.id}">Delete</button>
-        </div></div>`).join('') || `<div class="empty">No sets yet.</div>`;
+        </div></div>`;}).join('') || `<div class="empty">No sets yet.</div>`;
     root.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(b.dataset.edit));
     root.querySelectorAll('[data-study]').forEach(b=>b.onclick=()=>{ selectedSetId=b.dataset.study; go('flashcards'); });
     root.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
@@ -219,6 +298,12 @@ Views.sets = (root)=>{
           <div class="spacer"></div>
           <button class="btn" id="saveSet">Save</button>
         </div>
+        <h3 style="margin-top:18px">Resources</h3>
+        <div id="eResources"></div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn ghost small" id="addRes">+ Add resource</button>
+          <span class="sub" style="margin:0">Linked resources show up under this set in Resources.</span>
+        </div>
       </div>`;
     const drawTerms = ()=>{
       $('#eTerms').innerHTML = s.terms.map((t,i)=>`
@@ -234,6 +319,35 @@ Views.sets = (root)=>{
       $$('[data-rm]').forEach(b=>b.onclick=()=>{ s.terms = s.terms.filter(x=>x.id!==b.dataset.rm); drawTerms(); });
     };
     drawTerms();
+    const drawResources = ()=>{
+      const linked = State.resources.filter(r=>r.setId===s.id);
+      $('#eResources').innerHTML = linked.length? linked.map(r=>`
+        <div class="row" style="margin:4px 0;padding:6px;border:1px solid var(--line);border-radius:10px">
+          <div>
+            <strong>${escapeHtml(r.title)}</strong>
+            <div class="sub" style="margin:2px 0 0;padding:2px 10px">${escapeHtml(r.kind)}${r.url?' · '+escapeHtml(r.url):''}</div>
+          </div>
+          <div class="spacer"></div>
+          ${r.url? `<a href="${escapeAttr(r.url)}" target="_blank" rel="noopener">Open ↗</a>`:''}
+          ${r.dataUrl? `<a href="${r.dataUrl}" download="${escapeAttr(r.filename||'file')}">Download ↓</a>`:''}
+          <button class="btn small ghost" data-unlink="${r.id}">Unlink</button>
+          <button class="btn small danger" data-rmres="${r.id}">×</button>
+        </div>`).join('') : `<div class="sub" style="margin:0;padding:6px 12px">No resources linked yet.</div>`;
+      $$('[data-unlink]').forEach(b=>b.onclick=()=>{
+        const r = State.resources.find(x=>x.id===b.dataset.unlink); if(!r) return;
+        r.setId = null; saveAll(); drawResources();
+      });
+      $$('[data-rmres]').forEach(b=>b.onclick=()=>{
+        State.resources = State.resources.filter(x=>x.id!==b.dataset.rmres); saveAll(); drawResources();
+      });
+    };
+    drawResources();
+    $('#addRes').onclick = ()=>{
+      const title = prompt('Resource title?'); if(!title) return;
+      const url = prompt('Link URL (leave blank for note):', '') || '';
+      State.resources.unshift({id:uid(), title, url, setId:s.id, kind: url?'link':'note'});
+      saveAll(); drawResources();
+    };
     $('#addTerm').onclick = ()=>{ s.terms.push({id:uid(),term:'',def:''}); drawTerms(); };
     $('#bulkAdd').onclick = ()=>{
       const text = prompt('Paste lines like:\nMitosis - cell division\nATP - energy currency');
@@ -301,8 +415,8 @@ Views.learn = (root)=>{
       const choices = pickChoices(set.terms, t);
       $('#learnHost').innerHTML = `
         <div class="quiz-q">
-          <div style="margin-bottom:10px"><strong>Definition:</strong> ${escapeHtml(t.def)}</div>
-          ${choices.map(c=>`<div class="choice" data-id="${c.id}">${escapeHtml(c.term)}</div>`).join('')}
+          <div style="margin-bottom:10px"><strong>Term:</strong> ${escapeHtml(t.term)}</div>
+          ${choices.map(c=>`<div class="choice" data-id="${c.id}">${escapeHtml(c.def)}</div>`).join('')}
           <div class="row" style="margin-top:10px"><button class="btn ghost small" id="hint">Hint</button><span class="spacer"></span><span class="sub">${pos+1}/${queue.length}</span></div>
         </div>`;
       $$('.choice').forEach(el=>el.onclick=()=>{
@@ -312,7 +426,7 @@ Views.learn = (root)=>{
         recordProgress(t.id, ok); bumpStreak();
         setTimeout(()=>{ pos++; next(); }, 700);
       });
-      $('#hint').onclick = ()=>toast('Starts with: '+t.term[0]);
+      $('#hint').onclick = ()=>toast('Definition starts with: '+(t.def||'?')[0]);
     }
     next();
   });
@@ -326,9 +440,27 @@ function weighted(terms){
   });
   return list.sort(()=>Math.random()-0.5).slice(0, Math.min(20, list.length));
 }
+function shuffle(arr){
+  // Fisher-Yates — uniform unbiased shuffle
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 function pickChoices(all, correct){
-  const others = all.filter(t=>t.id!==correct.id).sort(()=>Math.random()-0.5).slice(0,3);
-  return [...others, correct].sort(()=>Math.random()-0.5);
+  // distractors from same set first
+  let pool = all.filter(t=>t.id!==correct.id && t.term && t.term!==correct.term);
+  // if not enough, pull from every other set so we always get up to 3 distractors
+  if (pool.length < 3){
+    const extra = State.sets
+      .flatMap(s=>s.terms)
+      .filter(t=>t.id!==correct.id && t.term && t.term!==correct.term && !pool.some(p=>p.term===t.term));
+    pool = pool.concat(extra);
+  }
+  const others = shuffle(pool).slice(0, Math.min(3, pool.length));
+  return shuffle([...others, correct]);
 }
 function recordProgress(id, ok){
   const p = State.progress[id] || {correct:0, wrong:0, lastSeen:0};
@@ -340,43 +472,57 @@ function recordProgress(id, ok){
 // Practice Tests
 Views.quiz = (root)=>{
   ensureSetPicker(root, 'Practice Test', (set)=>{
-    const qs = set.terms.slice().sort(()=>Math.random()-0.5).slice(0, Math.min(10, set.terms.length))
-      .map(t=>({t, choices: pickChoices(set.terms,t)}));
+    const qs = shuffle(set.terms).slice(0, Math.min(10, set.terms.length))
+      .map(t=>({t, choices: pickChoices(set.terms,t), picked:null}));
     let submitted=false;
-    const draw = ()=>{
-      root.insertAdjacentHTML('beforeend', `<div id="quizHost"></div>`);
-      $('#quizHost').innerHTML = qs.map((q,idx)=>`
+
+    root.insertAdjacentHTML('beforeend', `<div id="quizHost"></div>`);
+    const host = $('#quizHost');
+
+    const render = ()=>{
+      const answered = qs.filter(q=>q.picked!==null).length;
+      host.innerHTML = qs.map((q,idx)=>`
         <div class="quiz-q" data-q="${idx}">
-          <div style="margin-bottom:8px"><strong>Q${idx+1}.</strong> ${escapeHtml(q.t.def)}</div>
-          ${q.choices.map(c=>`<div class="choice" data-cid="${c.id}">${escapeHtml(c.term)}</div>`).join('')}
-        </div>`).join('') + `<button class="btn" id="submitQ">Submit test</button><div id="quizResult"></div>`;
-      $$('.choice').forEach(el=>el.onclick=()=>{
-        if(submitted) return;
-        const parent = el.closest('.quiz-q');
-        parent.querySelectorAll('.choice').forEach(c=>c.classList.remove('selected'));
-        el.classList.add('selected');
-        parent.dataset.picked = el.dataset.cid;
+          <div style="margin-bottom:8px"><strong>Q${idx+1}.</strong> ${escapeHtml(q.t.term)}</div>
+          ${q.choices.map((c,ci)=>`
+            <button type="button" class="choice ${q.picked===ci?'selected':''}${submitted?(c.id===q.t.id?' correct':(q.picked===ci&&c.id!==q.t.id?' wrong':'')):''}" data-q="${idx}" data-ci="${ci}">
+              ${escapeHtml(c.def)}
+            </button>`).join('')}
+        </div>`).join('') + `
+        <div class="row" style="margin-top:6px;align-items:center">
+          <span class="sub" style="margin:0">${answered}/${qs.length} answered</span>
+          <div class="spacer"></div>
+          <button class="btn" id="submitQ" ${submitted || answered<qs.length ? 'disabled' : ''}>${submitted?'Submitted':'Submit test'}</button>
+        </div>
+        <div id="quizResult"></div>`;
+
+      host.querySelectorAll('.choice').forEach(btn=>{
+        btn.onclick = ()=>{
+          if (submitted) return;
+          const qIdx = +btn.dataset.q, ci = +btn.dataset.ci;
+          qs[qIdx].picked = ci;
+          render();
+        };
       });
-      $('#submitQ').onclick = ()=>{
-        if(submitted) return; submitted=true;
-        let correct=0;
-        qs.forEach((q,idx)=>{
-          const parent = $(`.quiz-q[data-q="${idx}"]`);
-          const picked = parent.dataset.picked;
-          parent.querySelectorAll('.choice').forEach(c=>{
-            if (c.dataset.cid===q.t.id) c.classList.add('correct');
-            if (c.dataset.cid===picked && picked!==q.t.id) c.classList.add('wrong');
+
+      const sub = $('#submitQ');
+      if (sub && !sub.disabled){
+        sub.onclick = ()=>{
+          submitted = true;
+          let correct=0;
+          qs.forEach(q=>{
+            const ok = q.choices[q.picked].id === q.t.id;
+            if (ok) correct++;
+            recordProgress(q.t.id, ok);
           });
-          const ok = picked===q.t.id;
-          if (ok) correct++;
-          recordProgress(q.t.id, ok);
-        });
-        bumpStreak();
-        $('#quizResult').innerHTML = `<div class="card" style="margin-top:14px"><h3>Score: ${correct}/${qs.length}</h3><p>${Math.round(correct/qs.length*100)}% — keep going!</p><button class="btn" id="retry">Retry</button></div>`;
-        $('#retry').onclick = ()=>go('quiz');
-      };
+          bumpStreak();
+          render();
+          $('#quizResult').innerHTML = `<div class="card" style="margin-top:14px"><h3>Score: ${correct}/${qs.length}</h3><p>${Math.round(correct/qs.length*100)}% — keep going!</p><button class="btn" id="retry">Retry</button></div>`;
+          $('#retry').onclick = ()=>go('quiz');
+        };
+      }
     };
-    draw();
+    render();
   });
 };
 
@@ -642,63 +788,69 @@ Views.pomodoro = (root)=>{
 };
 
 // Analytics
-Views.analytics = (root)=>{
-  const setStats = State.sets.map(s=>{
-    const terms = s.terms;
-    const stats = terms.map(t=>State.progress[t.id]||{correct:0,wrong:0});
-    const mastered = stats.filter(p=>p.correct-p.wrong>=2).length;
-    const shaky = stats.filter(p=>p.correct>0 && p.correct-p.wrong<2 && p.correct-p.wrong>=0).length;
-    const weak = stats.filter(p=>p.wrong>p.correct).length;
-    return {s,mastered,shaky,weak,total:terms.length};
-  });
-  root.innerHTML = `
-    <h1>Progress Analytics</h1>
-    <p class="sub">What you've mastered and what needs more review.</p>
-    <div class="grid cards-3">
-      <div class="card"><h3>Mastered terms</h3><div class="kpi mastered">${setStats.reduce((a,b)=>a+b.mastered,0)}</div></div>
-      <div class="card"><h3>Needs review</h3><div class="kpi weak">${setStats.reduce((a,b)=>a+b.weak,0)}</div></div>
-      <div class="card"><h3>Total terms</h3><div class="kpi">${setStats.reduce((a,b)=>a+b.total,0)}</div></div>
-    </div>
-    <h2>By study set</h2>
-    ${setStats.length? setStats.map(({s,mastered,shaky,weak,total})=>{
-      const pct = total? Math.round(mastered/total*100):0;
-      return `<div class="card" style="margin-bottom:10px">
-        <div class="row"><strong>${escapeHtml(s.title)}</strong><div class="spacer"></div><span class="tag">${pct}% mastered</span></div>
-        <div class="bar-row"><div class="bar-label mastered">Mastered (${mastered})</div><div class="bar"><div style="width:${total?mastered/total*100:0}%"></div></div></div>
-        <div class="bar-row"><div class="bar-label shaky">Familiar (${shaky})</div><div class="bar"><div style="width:${total?shaky/total*100:0}%;background:linear-gradient(90deg,#f0b429,#ff8a3c)"></div></div></div>
-        <div class="bar-row"><div class="bar-label weak">Weak (${weak})</div><div class="bar"><div style="width:${total?weak/total*100:0}%;background:linear-gradient(90deg,#ff6a6a,#ff3a8c)"></div></div></div>
-      </div>`;
-    }).join('') : `<div class="empty">No data yet — study a set first.</div>`}`;
-};
+// (Progress merged into Dashboard above)
 
 // Resources
 Views.resources = (root)=>{
+  const setOpts = `<option value="">— Unassigned —</option>` + State.sets.map(s=>`<option value="${s.id}">${escapeHtml(s.title)}</option>`).join('');
   root.innerHTML = `
     <h1>Resources</h1>
-    <p class="sub">Upload PDFs, images, and links for any subject.</p>
+    <p class="sub">Attach PDFs, images, links, and notes to a study set.</p>
     <div class="card">
       <label>Title</label><input id="rTitle" placeholder="Lecture 3 slides"/>
+      <label>Study set</label>
+      <select id="rSet">${setOpts}</select>
       <label>Link or note</label><input id="rUrl" placeholder="https://… or paste a note"/>
       <label>Upload file (stored in your browser)</label><input id="rFile" type="file"/>
       <div class="row" style="margin-top:8px"><button class="btn" id="rAdd">Add resource</button></div>
     </div>
+
     <h2>Library</h2>
+    <div class="row" style="margin-bottom:10px">
+      <label style="margin:0">Filter by set:</label>
+      <select id="rFilter" style="max-width:260px"><option value="__all">All sets</option>${setOpts}</select>
+    </div>
     <div id="rList" class="grid cards-3"></div>`;
+
+  function setTitle(id){ return State.sets.find(s=>s.id===id)?.title || 'Unassigned'; }
+
   function render(){
-    $('#rList').innerHTML = State.resources.map(r=>`
+    const f = $('#rFilter').value;
+    const list = State.resources.filter(r=>{
+      if (f==='__all') return true;
+      if (f==='') return !r.setId;
+      return r.setId === f;
+    });
+    $('#rList').innerHTML = list.map(r=>`
       <div class="card">
         <h3>${escapeHtml(r.title)}</h3>
-        <p>${escapeHtml(r.kind)}</p>
-        ${r.url? `<a href="${escapeAttr(r.url)}" target="_blank" rel="noopener">Open ↗</a>`:''}
-        ${r.dataUrl? `<a href="${r.dataUrl}" download="${escapeAttr(r.filename||'file')}">Download ↓</a>`:''}
+        <p>${escapeHtml(r.kind)}${r.setId? ' · '+escapeHtml(setTitle(r.setId)) : ' · unassigned'}</p>
+        ${r.url? `<div style="margin-top:6px"><a href="${escapeAttr(r.url)}" target="_blank" rel="noopener">Open ↗</a></div>`:''}
+        ${r.dataUrl? `<div style="margin-top:6px"><a href="${r.dataUrl}" download="${escapeAttr(r.filename||'file')}">Download ↓</a></div>`:''}
+        <label style="margin-top:10px">Linked set</label>
+        <select data-relink="${r.id}">
+          <option value="" ${!r.setId?'selected':''}>— Unassigned —</option>
+          ${State.sets.map(s=>`<option value="${s.id}" ${s.id===r.setId?'selected':''}>${escapeHtml(s.title)}</option>`).join('')}
+        </select>
         <div class="row" style="margin-top:8px"><button class="btn small danger" data-rd="${r.id}">Delete</button></div>
-      </div>`).join('') || `<div class="empty">No resources yet.</div>`;
+      </div>`).join('') || `<div class="empty">No resources here yet.</div>`;
     $$('[data-rd]').forEach(b=>b.onclick=()=>{ State.resources = State.resources.filter(r=>r.id!==b.dataset.rd); saveAll(); render(); });
+    $$('[data-relink]').forEach(sel=>sel.onchange=()=>{
+      const r = State.resources.find(x=>x.id===sel.dataset.relink); if(!r) return;
+      r.setId = sel.value || null; saveAll(); render();
+    });
   }
+  $('#rFilter').onchange = render;
   $('#rAdd').onclick = ()=>{
-    const title = $('#rTitle').value || 'Untitled'; const url = $('#rUrl').value;
+    const title = $('#rTitle').value || 'Untitled';
+    const url = $('#rUrl').value;
+    const setId = $('#rSet').value || null;
     const f = $('#rFile').files[0];
-    const finish = (extra={})=>{ State.resources.unshift({id:uid(),title,url,kind: f? f.type||'file':(url?'link':'note'),...extra}); saveAll(); render(); $('#rTitle').value=''; $('#rUrl').value=''; $('#rFile').value=''; };
+    const finish = (extra={})=>{
+      State.resources.unshift({id:uid(), title, url, setId, kind: f? f.type||'file':(url?'link':'note'), ...extra});
+      saveAll(); render();
+      $('#rTitle').value=''; $('#rUrl').value=''; $('#rFile').value=''; $('#rSet').value='';
+    };
     if (f){
       if (f.size > 4*1024*1024) return toast('File too big for browser storage (4MB max)');
       const reader = new FileReader();
@@ -777,5 +929,6 @@ function escapeAttr(s=''){ return escapeHtml(s).replace(/'/g,'&#39;'); }
   // Reset pomodoro daily count if new day
   const tag = Store.load('pomoDay', null);
   if (tag !== todayISO()){ State.pomo.completedToday = 0; saveAll(); Store.save('pomoDay', todayISO()); }
-  go('dashboard');
+  const initial = (location.hash||'').replace(/^#/,'') || 'dashboard';
+  go(Views[initial] ? initial : 'dashboard');
 })();
